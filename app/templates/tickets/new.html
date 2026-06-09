@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo ticket{% endblock %}
+
+{% block content %}
+	<div class='row justify-content-center'>
+		<div class='col-lg-8'>
+			<h4 class='mb-4'>Abrir nuevo ticket</h4>
+
+			<div class='card'>
+				<div class='card-body'>
+					<form method='POST'>
+						<div class='mb-3'>
+							<label class='form-label fw-semibold'>Asunto *</label>
+							<input type='text' name='title' class='form-control' required placeholder='Describe brevemente el problema'>
+						</div>
+
+						<div class='mb-3'>
+							<label class='form-label fw-semibold'>Descripcion detallada *</label>
+							<textarea name='description' class='form-control' rows='5' required placeholder='Explica el problema con todo el detalle posible...'></textarea>
+						</div>
+
+						<div class='row g-3'>
+							<div class='col-md-4'>
+								<label class='form-label fw-semibold'>Prioridad</label>
+								<select name='priority' class='form-select'>
+									<option value='low'>Baja</option>
+									<option value='medium' selected>Media</option>
+									<option value='high'>Alta</option>
+									<option value='critical'>Critica</option>
+								</select>
+							</div>
+
+							<div class='col-md-4'>
+								<label class='form-label fw-semibold'>Categoria</label>
+								<input type='text' name='category' class='form-control' placeholder='Ej: Hardware, Software, Red...'>
+							</div>
+
+							{% if current_user.is_admin() %}
+								<div class='col-md-4'>
+									<label class='form-label fw-semibold'>Asignar a</label>
+									<select name='assigned_to' class='form-select'>
+										<option value=''>Sin asignar</option>
+										{% for agent in agents %}
+											<option value='{{ agent.id }}'>{{ agent.name }}</option>
+										{% endfor %}
+									</select>
+								</div>
+							{% endif %}
+						</div>
+
+						<div class='mt-4 d-flex gap-2'>
+							<button type='submit' class='btn btn-primary'>Crear ticket</button>
+							<a href='{{ url_for("tickets.list_tickets") }}' class='btn btn-secondary'>Cancelar</a>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+{% endblock %}

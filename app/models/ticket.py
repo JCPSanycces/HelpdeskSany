@@ -1,0 +1,47 @@
+from app import db
+from datetime import datetime
+
+class Ticket(db.Model):
+
+    __tablename__ = 'tickets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    status = db.Column(db.String(30), default='open')
+
+    # Valores: open / in_progress / pending / resolved / closed
+    priority = db.Column(db.String(20), default='medium')
+    
+    # Valores: low / medium / high / critical
+    category = db.Column(db.String(100), default='')
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
+    onupdate=datetime.utcnow)
+    comments = db.relationship('Comment', backref='ticket', lazy='dynamic',
+    cascade='all, delete-orphan')
+
+    STATUS_LABELS = {
+    'open': 'Abierto',
+    'in_progress': 'En progreso',
+    'pending': 'Pendiente',
+    'resolved': 'Resuelto',
+    'closed': 'Cerrado',
+    }
+
+    PRIORITY_LABELS = {
+    'low': 'Baja',
+    'medium': 'Media',
+    'high': 'Alta',
+    'critical': 'Critica',
+    }
+    def status_label(self):
+        return self.STATUS_LABELS.get(self.status, self.status)
+
+    def priority_label(self):
+        return self.PRIORITY_LABELS.get(self.priority, self.priority)
+
+    def __repr__(self):
+        return f'<Ticket #{self.id} {self.title[:30]}>'

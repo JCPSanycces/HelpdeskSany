@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Ticket #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+	<div class='row g-4'>
+		<!-- Columna principal -->
+		<div class='col-lg-8'>
+			<div class='card mb-4'>
+				<div class='card-header bg-white d-flex justify-content-between align-items-center'>
+					<span class='fw-semibold'>Ticket #{{ ticket.id }}</span>
+					<span class='badge badge-{{ ticket.status }}'>{{ ticket.status_label() }}</span>
+				</div>
+
+				<div class='card-body'>
+					<h5>{{ ticket.title }}</h5>
+					<p class='text-muted mb-0'>{{ ticket.description }}</p>
+				</div>
+
+				<div class='card-footer bg-white text-muted' style='font-size:.85rem'>
+					Creado por {{ ticket.solicitante.name }} el
+					{{ ticket.created_at.strftime('%d/%m/%Y a las %H:%M') }}
+				</div>
+			</div>
+
+			<!-- Comentarios -->
+			<h6 class='fw-semibold mb-3'>Comentarios</h6>
+			{% for c in ticket.comments.order_by('created_at') %}
+				<div class='card mb-2'>
+					<div class='card-body py-2'>
+						<div class='d-flex justify-content-between mb-1'>
+							<strong style='font-size:.9rem'>{{ c.author.name }}</strong>
+							<small class='text-muted'>{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+						</div>
+						<p class='mb-0' style='font-size:.9rem'>{{ c.body }}</p>
+					</div>
+				</div>
+			{% else %}
+				<p class='text-muted'>Aun no hay comentarios.</p>
+			{% endfor %}
+
+			<!-- Formulario de comentario -->
+			<div class='card mt-3'>
+				<div class='card-body'>
+					<form method='POST' action='{{ url_for("tickets.add_comment", ticket_id=ticket.id) }}'>
+						<label class='form-label fw-semibold'>Anadir comentario</label>
+						<textarea name='body' class='form-control mb-2' rows='3' placeholder='Escribe aqui...' required></textarea>
+						<button type='submit' class='btn btn-primary btn-sm'>Enviar</button>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<!-- Columna lateral (gestion - solo agentes/admin) -->
+		{% if current_user.is_agent() %}
+			<div class='col-lg-4'>
+				<div class='card'>
+					<div class='card-header bg-white fw-semibold'>Gestion del ticket</div>
+					<div class='card-body'>
+						<form method='POST' action='{{ url_for("tickets.update_ticket", ticket_id=ticket.id) }}'>
+							<div class='mb-3'>
+								<label class='form-label'>Estado</label>
+								<select name='status' class='form-select'>
+									{% for val, lbl in [('open','Abierto'),('in_progress','En progreso'),('pending','Pendiente'),('resolved','Resuelto'),('closed','Cerrado')] %}
+										<option value='{{ val }}' {% if ticket.status==val %}selected{% endif %}>{{ lbl }}</option>
+									{% endfor %}
+								</select>
+							</div>
+
+							<div class='mb-3'>
+								<label class='form-label'>Prioridad</label>
+								<select name='priority' class='form-select'>
+									{% for val, lbl in [('low','Baja'),('medium','Media'),('high','Alta'),('critical','Critica')] %}
+										<option value='{{ val }}' {% if ticket.priority==val %}selected{% endif %}>{{ lbl }}</option>
+									{% endfor %}
+								</select>
+							</div>
+
+							<div class='mb-3'>
+								<label class='form-label'>Asignado a</label>
+								<select name='assigned_to' class='form-select'>
+									<option value=''>Sin asignar</option>
+									{% for a in agents %}
+										<option value='{{ a.id }}' {% if ticket.assigned_to==a.id %}selected{% endif %}>{{ a.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
+
+							<button type='submit' class='btn btn-primary w-100'>Guardar cambios</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		{% endif %}
+	</div>
+
+{% endblock %}
