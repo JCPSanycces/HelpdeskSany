@@ -18,9 +18,7 @@ class User(UserMixin, db.Model):
 
     # Relaciones con tickets
     tickets_creados = db.relationship('Ticket',
-    foreign_keys='Ticket.created_by', backref='solicitante', lazy='dynamic')
-    tickets_asignados= db.relationship('Ticket',
-    foreign_keys='Ticket.assigned_to', backref='agente', lazy='dynamic')
+        foreign_keys='Ticket.created_by', backref='solicitante', lazy='dynamic')
     tickets_asignados = db.relationship('Ticket',
         foreign_keys='Ticket.assigned_to', backref='agente', lazy='dynamic')
 
