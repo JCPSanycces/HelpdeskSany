@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Editar usuario{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <h4 class="mb-4">Editar usuario</h4>
+    <div class="card">
+      <div class="card-body">
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nombre completo *</label>
+            <input type="text" name="name" class="form-control"
+                   value="{{ u.name }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email *</label>
+            <input type="email" name="email" class="form-control"
+                   value="{{ u.email }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nueva contraseña</label>
+            <input type="password" name="password" class="form-control"
+                   placeholder="Dejar en blanco para no cambiarla">
+            <div class="form-text">Solo rellena este campo si quieres cambiar la contraseña.</div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Rol</label>
+              <select name="role" class="form-select">
+                <option value="user"  {% if u.role=='user'  %}selected{% endif %}>Usuario</option>
+                <option value="agent" {% if u.role=='agent' %}selected{% endif %}>Agente</option>
+                <option value="admin" {% if u.role=='admin' %}selected{% endif %}>Administrador</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Departamento</label>
+              <input type="text" name="department" class="form-control"
+                     value="{{ u.department or '' }}"
+                     placeholder="Ej: Contabilidad, IT...">
+            </div>
+          </div>
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            <a href="{{ url_for('users.list_users') }}" class="btn btn-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
