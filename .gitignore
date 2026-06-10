@@ -10,3 +10,6 @@ instance/
 
 # migrations
 migrations/
+
+# .env
+.env
