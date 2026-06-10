@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Ticket #{{ ticket.id }}{% endblock %}
+{% block title %}Ticket #{{ ticket.ticket_id }}{% endblock %}
 
 {% block content %}
 	<div class='row g-4'>
@@ -7,7 +7,7 @@
 		<div class='col-lg-8'>
 			<div class='card mb-4'>
 				<div class='card-header bg-white d-flex justify-content-between align-items-center'>
-					<span class='fw-semibold'>Ticket #{{ ticket.id }}</span>
+					<span class='fw-semibold'>Ticket #{{ ticket.ticket_id }}</span>
 					<span class='badge badge-{{ ticket.status }}'>{{ ticket.status_label() }}</span>
 				</div>
 
@@ -41,7 +41,7 @@
 			<!-- Formulario de comentario -->
 			<div class='card mt-3'>
 				<div class='card-body'>
-					<form method='POST' action='{{ url_for("tickets.add_comment", ticket_id=ticket.id) }}'>
+					<form method='POST' action='{{ url_for("tickets.add_comment", ticket_id=ticket.ticket_id) }}'>
 						<label class='form-label fw-semibold'>Anadir comentario</label>
 						<textarea name='body' class='form-control mb-2' rows='3' placeholder='Escribe aqui...' required></textarea>
 						<button type='submit' class='btn btn-primary btn-sm'>Enviar</button>
@@ -56,7 +56,7 @@
 				<div class='card'>
 					<div class='card-header bg-white fw-semibold'>Gestion del ticket</div>
 					<div class='card-body'>
-						<form method='POST' action='{{ url_for("tickets.update_ticket", ticket_id=ticket.id) }}'>
+						<form method='POST' action='{{ url_for("tickets.update_ticket", ticket_id=ticket.ticket_id) }}'>
 							<div class='mb-3'>
 								<label class='form-label'>Estado</label>
 								<select name='status' class='form-select'>

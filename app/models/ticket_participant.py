@@ -5,7 +5,7 @@ class TicketParticipant(db.Model):
     __tablename__ = 'ticket_participants'
 
     id         = db.Column(db.Integer, primary_key=True)
-    ticket_id  = db.Column(db.Integer, db.ForeignKey('tickets.id'), nullable=False)
+    ticket_id = db.Column(db.String(20), db.ForeignKey('tickets.ticket_id'), nullable=False)
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     joined_at  = db.Column(db.DateTime, default=datetime.utcnow)
 

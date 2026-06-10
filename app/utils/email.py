@@ -41,7 +41,7 @@ def enviar_notificacion_asignacion(agente, ticket):
         <p>Se te ha asignado el siguiente ticket:</p>
         <table style="width:100%; border-collapse:collapse; margin:16px 0;">
             <tr><td style="padding:8px; font-weight:bold; width:120px;">Ticket:</td>
-                <td style="padding:8px;">#{ticket.id}</td></tr>
+                <td style="padding:8px;">#{ticket.ticket_id}</td></tr>
             <tr style="background:white;"><td style="padding:8px; font-weight:bold;">Asunto:</td>
                 <td style="padding:8px;">{ticket.title}</td></tr>
             <tr><td style="padding:8px; font-weight:bold;">Prioridad:</td>
@@ -55,7 +55,7 @@ def enviar_notificacion_asignacion(agente, ticket):
     )
     _enviar(
         [agente.email],
-        f'[HelpDesk] Ticket #{ticket.id} asignado a ti',
+        f'[HelpDesk] Ticket #{ticket.ticket_id} asignado a ti',
         html,
         thread_id=ticket.email_thread_id
     )
@@ -71,10 +71,10 @@ def enviar_notificacion_comentario(autor, ticket, comentario, participantes):
         return
 
     html = _base_html(
-        f'💬 Nuevo comentario en Ticket #{ticket.id}',
+        f'💬 Nuevo comentario en Ticket #{ticket.ticket_id}',
         f"""
         <p><strong>{autor.name}</strong> ha añadido un comentario en el ticket
-           <strong>#{ticket.id}: {ticket.title}</strong>:</p>
+           <strong>#{ticket.ticket_id}: {ticket.title}</strong>:</p>
         <div style="background:white; border-left:4px solid #185FA5;
                     padding:12px 16px; margin:16px 0; border-radius:0 4px 4px 0;">
             {comentario.body}
@@ -87,7 +87,7 @@ def enviar_notificacion_comentario(autor, ticket, comentario, participantes):
     )
     _enviar(
         destinatarios,
-        f'[HelpDesk] Comentarios Ticket #{ticket.id}',
+        f'[HelpDesk] Comentarios Ticket #{ticket.ticket_id}',
         html,
         thread_id=ticket.email_thread_id
     )
@@ -100,9 +100,9 @@ def enviar_notificacion_cambio_estado(ticket, estado_anterior, participantes):
         return
 
     html = _base_html(
-        f'🔄 Cambio de estado en Ticket #{ticket.id}',
+        f'🔄 Cambio de estado en Ticket #{ticket.ticket_id}',
         f"""
-        <p>El ticket <strong>#{ticket.id}: {ticket.title}</strong>
+        <p>El ticket <strong>#{ticket.ticket_id}: {ticket.title}</strong>
            ha cambiado de estado:</p>
         <div style="display:flex; align-items:center; gap:12px; margin:16px 0;">
             <span style="background:#e0e0e0; padding:6px 14px; border-radius:20px;">
@@ -121,7 +121,7 @@ def enviar_notificacion_cambio_estado(ticket, estado_anterior, participantes):
     )
     _enviar(
         destinatarios,
-        f'[HelpDesk] Cambio de estado Ticket #{ticket.id}',
+        f'[HelpDesk] Cambio de estado Ticket #{ticket.ticket_id}',
         html,
         thread_id=ticket.email_thread_id
     )

@@ -64,8 +64,8 @@
 				</thead>
 				<tbody>
 					{% for t in recent_tickets %}
-						<tr onclick="location='{{ url_for("tickets.detail", ticket_id=t.id) }}'" style='cursor:pointer'>
-							<td class='text-muted'>#{{ t.id }}</td>
+						<tr onclick="location='{{ url_for("tickets.detail", ticket_id=t.ticket_id) }}'" style='cursor:pointer'>
+							<td class='text-muted'>#{{ t.ticket_id }}</td>
 							<td>{{ t.title }}</td>
 							<td>
 								<span class='badge badge-{{ t.status }}'>{{ t.status_label() }}</span>

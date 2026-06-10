@@ -6,17 +6,13 @@ class Ticket(db.Model):
 
     __tablename__ = 'tickets'
 
-    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(db.String(20), primary_key=True)
+    # id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     status = db.Column(db.String(30), default='open')
-    email_thread_id = db.Column(db.String(200), default=lambda: f"<ticket-{uuid.uuid4()}@sanycces.es>")
-
-    # Valores: open / in_progress / pending / resolved / closed
-    priority = db.Column(db.String(20), default='medium')
-    
-    # Valores: low / medium / high / critical
-    category = db.Column(db.String(100), default='')
+    priority = db.Column(db.String(20), default='medium')       # Valores: open / in_progress / pending / resolved / closed
+    category = db.Column(db.String(100), default='')            # Valores: low / medium / high / critical
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -24,6 +20,11 @@ class Ticket(db.Model):
     onupdate=datetime.utcnow)
     comments = db.relationship('Comment', backref='ticket', lazy='dynamic',
     cascade='all, delete-orphan')
+    participantes = db.relationship('TicketParticipant', backref='ticket',
+                                    lazy='dynamic', cascade='all, delete-orphan')
+
+    # comunicación por email
+    email_thread_id = db.Column(db.String(200), default=lambda: f"<ticket-{uuid.uuid4()}@sanycces.es>")
 
     STATUS_LABELS = {
     'open': 'Abierto',
@@ -39,6 +40,8 @@ class Ticket(db.Model):
     'high': 'Alta',
     'critical': 'Critica',
     }
+
+
     def status_label(self):
         return self.STATUS_LABELS.get(self.status, self.status)
 
@@ -46,4 +49,4 @@ class Ticket(db.Model):
         return self.PRIORITY_LABELS.get(self.priority, self.priority)
 
     def __repr__(self):
-        return f'<Ticket #{self.id} {self.title[:30]}>'
+        return f'<Ticket {self.ticket_id}>'

@@ -58,8 +58,8 @@
 				</thead>
 				<tbody>
 					{% for t in tickets %}
-						<tr onclick="location='{{ url_for("tickets.detail", ticket_id=t.id) }}'" style='cursor:pointer'>
-							<td>#{{ t.id }}</td>
+						<tr onclick="location='{{ url_for("tickets.detail", ticket_id=t.ticket_id) }}'" style='cursor:pointer'>
+							<td>#{{ t.ticket_id }}</td>
 							<td>{{ t.title }}</td>
 							<td>{{ t.solicitante.name if t.solicitante else '-' }}</td>
 							<td>

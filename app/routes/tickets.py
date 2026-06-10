@@ -5,6 +5,7 @@ from app.models.ticket import Ticket
 from app.models.comment import Comment
 from app.models.user import User
 from app.models.ticket_participant import TicketParticipant
+from app.utils.ticket_id import generar_ticket_id
 from app.utils.email import (
     enviar_notificacion_asignacion,
     enviar_notificacion_comentario,
@@ -53,6 +54,7 @@ def new_ticket():
     if request.method == 'POST':
         assigned_id = request.form.get('assigned_to') or None
         t = Ticket(
+            ticket_id=generar_ticket_id(),
             title=request.form['title'],
             description=request.form['description'],
             priority=request.form.get('priority', 'medium'),
@@ -64,9 +66,9 @@ def new_ticket():
         db.session.flush()  # Para tener t.id antes del commit
 
         # Registrar participantes iniciales
-        _añadir_participante(t.id, current_user.id)
+        _añadir_participante(t.ticket_id, current_user.id)
         if assigned_id:
-            _añadir_participante(t.id, int(assigned_id))
+            _añadir_participante(t.ticket_id, int(assigned_id))
 
         db.session.commit()
 
@@ -76,13 +78,13 @@ def new_ticket():
             if agente:
                 enviar_notificacion_asignacion(agente, t)
 
-        flash(f'Ticket #{t.id} creado correctamente.', 'success')
-        return redirect(url_for('tickets.detail', ticket_id=t.id))
+        flash(f'Ticket {t.ticket_id} creado correctamente.', 'success')
+        return redirect(url_for('tickets.detail', ticket_id=t.ticket_id))
 
     return render_template('tickets/new.html', agents=agents)
 
 
-@tickets_bp.route('/<int:ticket_id>')
+@tickets_bp.route('/<string:ticket_id>')
 @login_required
 def detail(ticket_id):
     ticket = Ticket.query.get_or_404(ticket_id)
@@ -91,7 +93,7 @@ def detail(ticket_id):
     return render_template('tickets/detail.html', ticket=ticket, agents=agents)
 
 
-@tickets_bp.route('/<int:ticket_id>/update', methods=['POST'])
+@tickets_bp.route('/<string:ticket_id>/update', methods=['POST'])
 @login_required
 def update_ticket(ticket_id):
     ticket = Ticket.query.get_or_404(ticket_id)
@@ -129,7 +131,7 @@ def update_ticket(ticket_id):
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
 
-@tickets_bp.route('/<int:ticket_id>/comment', methods=['POST'])
+@tickets_bp.route('/<string:ticket_id>/comment', methods=['POST'])
 @login_required
 def add_comment(ticket_id):
     ticket = Ticket.query.get_or_404(ticket_id)
