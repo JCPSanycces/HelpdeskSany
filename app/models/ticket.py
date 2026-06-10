@@ -1,5 +1,6 @@
 from app import db
 from datetime import datetime
+import uuid
 
 class Ticket(db.Model):
 
@@ -9,6 +10,7 @@ class Ticket(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     status = db.Column(db.String(30), default='open')
+    email_thread_id = db.Column(db.String(200), default=lambda: f"<ticket-{uuid.uuid4()}@sanycces.es>")
 
     # Valores: open / in_progress / pending / resolved / closed
     priority = db.Column(db.String(20), default='medium')
