@@ -6,10 +6,21 @@
 		<!-- Columna principal -->
 		<div class='col-lg-8'>
 			<div class='card mb-4'>
-				<div class='card-header bg-white d-flex justify-content-between align-items-center'>
-					<span class='fw-semibold'>Ticket #{{ ticket.ticket_id }}</span>
-					<span class='badge badge-{{ ticket.status }}'>{{ ticket.status_label() }}</span>
-				</div>
+				<div class="card-header bg-white d-flex justify-content-between align-items-center">
+					<span class="fw-semibold">Ticket {{ ticket.ticket_id }}</span>
+					<div class="d-flex align-items-center gap-2">
+						<span class="badge badge-{{ ticket.status }}">{{ ticket.status_label() }}</span>
+						{% if current_user.is_admin() %}
+						<form method="POST"
+							action="{{ url_for('tickets.delete_ticket', ticket_id=ticket.ticket_id) }}"
+							onsubmit="return confirm('¿Eliminar el ticket {{ ticket.ticket_id }}? Esta acción no se puede deshacer.')">
+						<button type="submit" class="btn btn-sm btn-danger">
+							<i class="bi bi-trash"></i> Eliminar ticket
+						</button>
+						</form>
+						{% endif %}
+					</div>
+					</div>
 
 				<div class='card-body'>
 					<h5>{{ ticket.title }}</h5>

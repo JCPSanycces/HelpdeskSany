@@ -15,6 +15,7 @@ from app.utils.email import (
 tickets_bp = Blueprint('tickets', __name__)
 
 
+# Funciones auxiliares para manejar participantes del ticket
 def _añadir_participante(ticket_id, user_id):
     """Añade un participante al ticket si no existe ya."""
     existe = TicketParticipant.query.filter_by(
@@ -24,10 +25,12 @@ def _añadir_participante(ticket_id, user_id):
         db.session.add(TicketParticipant(ticket_id=ticket_id, user_id=user_id))
 
 
+# Obtener participantes del ticket para notificaciones
 def _get_participantes(ticket_id):
     return TicketParticipant.query.filter_by(ticket_id=ticket_id).all()
 
 
+# Listado de tickets con filtros
 @tickets_bp.route('/')
 @login_required
 def list_tickets():
@@ -45,6 +48,7 @@ def list_tickets():
                            status=status, priority=priority)
 
 
+# Crear nuevo ticket con opción de asignar a un agente
 @tickets_bp.route('/new', methods=['GET', 'POST'])
 @login_required
 def new_ticket():
@@ -84,6 +88,7 @@ def new_ticket():
     return render_template('tickets/new.html', agents=agents)
 
 
+# Detalle del ticket con comentarios y formulario de actualización
 @tickets_bp.route('/<string:ticket_id>')
 @login_required
 def detail(ticket_id):
@@ -93,6 +98,7 @@ def detail(ticket_id):
     return render_template('tickets/detail.html', ticket=ticket, agents=agents)
 
 
+# actualizar estado, prioridad y asignación
 @tickets_bp.route('/<string:ticket_id>/update', methods=['POST'])
 @login_required
 def update_ticket(ticket_id):
@@ -110,6 +116,7 @@ def update_ticket(ticket_id):
     ticket.priority   = request.form.get('priority', ticket.priority)
     ticket.assigned_to = nuevo_agente_id
 
+
     # Añadir nuevo agente como participante si ha cambiado
     if nuevo_agente_id:
         _añadir_participante(ticket_id, int(nuevo_agente_id))
@@ -117,11 +124,13 @@ def update_ticket(ticket_id):
     db.session.commit()
     participantes = _get_participantes(ticket_id)
 
+
     # Email si el agente ha cambiado
     if nuevo_agente_id and str(nuevo_agente_id) != str(agente_anterior_id):
         agente = User.query.get(int(nuevo_agente_id))
         if agente:
             enviar_notificacion_asignacion(agente, ticket)
+
 
     # Email si el estado ha cambiado
     if nuevo_estado != estado_anterior:
@@ -131,6 +140,7 @@ def update_ticket(ticket_id):
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
 
+# Añadir comentario al ticket
 @tickets_bp.route('/<string:ticket_id>/comment', methods=['POST'])
 @login_required
 def add_comment(ticket_id):
@@ -149,3 +159,23 @@ def add_comment(ticket_id):
         enviar_notificacion_comentario(current_user, ticket, c, participantes)
 
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+
+# Solo los admins pueden eliminar tickets
+@tickets_bp.route('/<string:ticket_id>/delete', methods=['POST'])
+@login_required
+def delete_ticket(ticket_id):
+    if not current_user.is_admin():
+        flash('No tienes permiso para eliminar tickets.', 'danger')
+        return redirect(url_for('tickets.list_tickets'))
+
+    ticket = Ticket.query.get_or_404(ticket_id)
+
+    # Eliminar comentarios y participantes asociados (por si cascade no está activo)
+    Comment.query.filter_by(ticket_id=ticket_id).delete()
+    TicketParticipant.query.filter_by(ticket_id=ticket_id).delete()
+    db.session.delete(ticket)
+    db.session.commit()
+
+    flash(f'Ticket {ticket_id} eliminado correctamente.', 'success')
+    return redirect(url_for('tickets.list_tickets'))

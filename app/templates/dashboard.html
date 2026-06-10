@@ -69,6 +69,7 @@
 						<th>Estado</th>
 						<th>Prioridad</th>
 						<th>Fecha</th>
+						{% if current_user.is_admin() %}<th></th>{% endif %}
 					</tr>
 				</thead>
 				<tbody>
@@ -81,10 +82,32 @@
 							</td>
 							<td>{{ t.priority_label() }}</td>
 							<td class='text-muted'>{{ t.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+							{% if current_user.is_admin() %}
+							<td onclick="event.stopPropagation()">
+							<form method="POST"
+									action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
+									onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}? Esta acción no se puede deshacer.')">
+								<button type="submit" class="btn btn-sm btn-outline-danger">
+								<i class="bi bi-trash"></i>
+								</button>
+							</form>
+							</td>
+							{% endif %}
 						</tr>
 					{% else %}
 						<tr>
 							<td colspan='5' class='text-center text-muted py-4'>No hay tickets</td>
+							{% if current_user.is_admin() %}
+							<td onclick="event.stopPropagation()">
+							<form method="POST"
+									action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
+									onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}? Esta acción no se puede deshacer.')">
+								<button type="submit" class="btn btn-sm btn-outline-danger">
+								<i class="bi bi-trash"></i>
+								</button>
+							</form>
+							</td>
+							{% endif %}							
 						</tr>
 					{% endfor %}
 				</tbody>
