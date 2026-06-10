@@ -26,7 +26,15 @@
         <tr>
           <td>{{ u.name }}</td>
           <td>{{ u.email }}</td>
-          <td><span class="badge bg-secondary">{{ u.role }}</span></td>
+          <td>
+            {% if u.role == 'admin' %}
+              <span class="badge bg-danger">Administrador</span>
+            {% elif u.role == 'agent' %}
+              <span class="badge bg-primary">Agente</span>
+            {% else %}
+              <span class="badge bg-secondary">Usuario</span>
+            {% endif %}
+          </td>
           <td>{{ u.department or '-' }}</td>
           <td>
             {% if u.active %}
