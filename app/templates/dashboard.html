@@ -10,42 +10,51 @@
 	</div>
 
 	<!-- Tarjetas de estadisticas -->
-	<div class='row g-3 mb-4'>
-		<div class='col-md-3'>
-			<div class='card text-center border-0 bg-primary bg-opacity-10'>
-				<div class='card-body'>
-					<div class='fs-2 fw-bold text-primary'>{{ total_open }}</div>
-					<div class='text-muted'>Abiertos</div>
-				</div>
+	<div class="row g-3 mb-4">
+	<div class="col-md-3">
+		<a href="{{ url_for('tickets.list_tickets', status='open') }}" class="text-decoration-none">
+		<div class="card text-center border-0 bg-primary bg-opacity-10 h-100"
+			style="cursor:pointer; transition:.2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+			<div class="card-body">
+			<div class="fs-2 fw-bold text-primary">{{ total_open }}</div>
+			<div class="text-muted">Abiertos</div>
 			</div>
 		</div>
-
-		<div class='col-md-3'>
-			<div class='card text-center border-0 bg-warning bg-opacity-10'>
-				<div class='card-body'>
-					<div class='fs-2 fw-bold text-warning'>{{ total_progress }}</div>
-					<div class='text-muted'>En progreso</div>
-				</div>
+		</a>
+	</div>
+	<div class="col-md-3">
+		<a href="{{ url_for('tickets.list_tickets', status='in_progress') }}" class="text-decoration-none">
+		<div class="card text-center border-0 bg-warning bg-opacity-10 h-100"
+			style="cursor:pointer; transition:.2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+			<div class="card-body">
+			<div class="fs-2 fw-bold text-warning">{{ total_progress }}</div>
+			<div class="text-muted">En progreso</div>
 			</div>
 		</div>
-
-		<div class='col-md-3'>
-			<div class='card text-center border-0 bg-success bg-opacity-10'>
-				<div class='card-body'>
-					<div class='fs-2 fw-bold text-success'>{{ total_resolved }}</div>
-					<div class='text-muted'>Resueltos</div>
-				</div>
+		</a>
+	</div>
+	<div class="col-md-3">
+		<a href="{{ url_for('tickets.list_tickets', status='resolved') }}" class="text-decoration-none">
+		<div class="card text-center border-0 bg-success bg-opacity-10 h-100"
+			style="cursor:pointer; transition:.2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+			<div class="card-body">
+			<div class="fs-2 fw-bold text-success">{{ total_resolved }}</div>
+			<div class="text-muted">Resueltos</div>
 			</div>
 		</div>
-
-		<div class='col-md-3'>
-			<div class='card text-center border-0 bg-secondary bg-opacity-10'>
-				<div class='card-body'>
-					<div class='fs-2 fw-bold text-secondary'>{{ total_closed }}</div>
-					<div class='text-muted'>Cerrados</div>
-				</div>
+		</a>
+	</div>
+	<div class="col-md-3">
+		<a href="{{ url_for('tickets.list_tickets', status='closed') }}" class="text-decoration-none">
+		<div class="card text-center border-0 bg-secondary bg-opacity-10 h-100"
+			style="cursor:pointer; transition:.2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+			<div class="card-body">
+			<div class="fs-2 fw-bold text-secondary">{{ total_closed }}</div>
+			<div class="text-muted">Cerrados</div>
 			</div>
 		</div>
+		</a>
+	</div>
 	</div>
 
 	<!-- Tabla de tickets recientes -->
