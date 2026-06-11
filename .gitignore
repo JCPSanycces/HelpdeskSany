@@ -13,3 +13,6 @@ migrations/
 
 # .env
 .env
+
+# static/uploads
+app/static/uploads/
