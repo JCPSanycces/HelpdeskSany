@@ -16,3 +16,6 @@ migrations/
 
 # static/uploads
 app/static/uploads/
+
+# reiniciar contador de tickets
+reiniciar_tickets.py
