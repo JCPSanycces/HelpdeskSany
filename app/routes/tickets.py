@@ -70,6 +70,7 @@ def list_tickets():
 def new_ticket():
     agents = User.query.filter(
         User.role.in_(['admin', 'agent'])).filter_by(active=True).all()
+    todos_usuarios = User.query.filter_by(active=True).order_by(User.name).all()
 
     if request.method == 'POST':
         assigned_id = request.form.get('assigned_to') or None
@@ -83,12 +84,17 @@ def new_ticket():
             assigned_to=assigned_id,
         )
         db.session.add(t)
-        db.session.flush()  # Para tener t.id antes del commit
+        db.session.flush()
 
-        # Registrar participantes iniciales
+        # Participantes obligatorios: creador y agente asignado
         _añadir_participante(t.ticket_id, current_user.id)
         if assigned_id:
             _añadir_participante(t.ticket_id, int(assigned_id))
+
+        # Participantes adicionales seleccionados en el formulario
+        ids_adicionales = request.form.getlist('participantes_ids')
+        for uid in ids_adicionales:
+            _añadir_participante(t.ticket_id, int(uid))
 
         db.session.commit()
 
@@ -98,10 +104,39 @@ def new_ticket():
             if agente:
                 enviar_notificacion_asignacion(agente, t)
 
+        # Notificar a participantes adicionales
+        from app.utils.email import _enviar, _base_html
+        for uid in ids_adicionales:
+            uid = int(uid)
+            # No notificar al creador ni al agente (ya tienen su propio email)
+            if uid != current_user.id and str(uid) != str(assigned_id):
+                nuevo = User.query.get(uid)
+                if nuevo:
+                    html = _base_html(
+                        f'📋 Añadido al ticket {t.ticket_id}',
+                        f"""
+                        <p>Hola <strong>{nuevo.name}</strong>,</p>
+                        <p>Has sido añadido como participante en el ticket
+                           <strong>{t.ticket_id}: {t.title}</strong>.</p>
+                        <p>A partir de ahora recibirás notificaciones de todas
+                           las interacciones de este ticket.</p>
+                        <p style="color:#666; font-size:13px;">
+                            Prioridad: <strong>{t.priority_label()}</strong> ·
+                            Categoría: <strong>{t.category or 'Sin categoría'}</strong>
+                        </p>
+                        """
+                    )
+                    _enviar(
+                        [nuevo.email],
+                        f'[HelpDesk] Añadido al ticket {t.ticket_id}',
+                        html,
+                        thread_id=t.email_thread_id
+                    )
+
         flash(f'Ticket {t.ticket_id} creado correctamente.', 'success')
         return redirect(url_for('tickets.detail', ticket_id=t.ticket_id))
 
-    return render_template('tickets/new.html', agents=agents)
+    return render_template('tickets/new.html', agents=agents, todos_usuarios=todos_usuarios)
 
 
 # Notificar al agente asignado

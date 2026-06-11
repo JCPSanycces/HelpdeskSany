@@ -32,27 +32,38 @@
 
 							<div class="col-md-4">
 								<label class="form-label fw-semibold">Categoría</label>
-  									<select name="category" class="form-select">
-										<option value="">-- Seleccionar --</option>
-										<option value="SAGE X3">SAGE X3</option>
-										<option value="Software">Software</option>
-										<option value="Hardware">Hardware</option>
-										<option value="Redes e internet">Redes e internet</option>
-										<option value="EDI">EDI</option>
-									  </select>
+								<select name="category" class="form-select">
+									<option value="">-- Seleccionar --</option>
+									<option value="SAGE X3">SAGE X3</option>
+									<option value="Software">Software</option>
+									<option value="Hardware">Hardware</option>
+									<option value="Redes e internet">Redes e internet</option>
+									<option value="EDI">EDI</option>
+								</select>
 							</div>
 
 							{% if current_user.is_admin() %}
-								<div class='col-md-4'>
-									<label class='form-label fw-semibold'>Asignar a</label>
-									<select name='assigned_to' class='form-select'>
-										<option value=''>Sin asignar</option>
-										{% for agent in agents %}
-											<option value='{{ agent.id }}'>{{ agent.name }}</option>
-										{% endfor %}
-									</select>
-								</div>
+							<div class='col-md-4'>
+								<label class='form-label fw-semibold'>Asignar a</label>
+								<select name='assigned_to' class='form-select'>
+									<option value=''>Sin asignar</option>
+									{% for agent in agents %}
+										<option value='{{ agent.id }}'>{{ agent.name }}</option>
+									{% endfor %}
+								</select>
+							</div>
 							{% endif %}
+						</div>
+
+						<div class="mb-3 mt-3">
+							<label class="form-label fw-semibold">Participantes adicionales</label>
+							<select name="participantes_ids" id="select-participantes-new"
+									multiple class="form-select">
+								{% for u in todos_usuarios %}
+								<option value="{{ u.id }}">{{ u.name }}</option>
+								{% endfor %}
+							</select>
+							<div class="form-text">Selecciona las personas que deben seguir este ticket desde el inicio.</div>
 						</div>
 
 						<div class='mt-4 d-flex gap-2'>
@@ -64,5 +75,15 @@
 			</div>
 		</div>
 	</div>
+
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+	new TomSelect('#select-participantes-new', {
+		plugins: ['remove_button'],
+		placeholder: 'Buscar y añadir participantes...',
+		maxOptions: 100,
+	});
+</script>
 
 {% endblock %}
