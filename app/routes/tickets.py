@@ -297,9 +297,18 @@ def delete_ticket(ticket_id):
 
     ticket = Ticket.query.get_or_404(ticket_id)
 
-    # Eliminar comentarios y participantes asociados (por si cascade no está activo)
+    # 1. Eliminar adjuntos de todos los comentarios del ticket
+    comentarios = Comment.query.filter_by(ticket_id=ticket_id).all()
+    for c in comentarios:
+        CommentAttachment.query.filter_by(comment_id=c.id).delete()
+
+    # 2. Eliminar comentarios
     Comment.query.filter_by(ticket_id=ticket_id).delete()
+
+    # 3. Eliminar participantes
     TicketParticipant.query.filter_by(ticket_id=ticket_id).delete()
+
+    # 4. Eliminar el ticket
     db.session.delete(ticket)
     db.session.commit()
 
