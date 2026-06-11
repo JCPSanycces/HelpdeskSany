@@ -88,17 +88,28 @@ def new_ticket():
     return render_template('tickets/new.html', agents=agents)
 
 
-# Detalle del ticket con comentarios y formulario de actualización
+# Notificar al agente asignado
 @tickets_bp.route('/<string:ticket_id>')
 @login_required
 def detail(ticket_id):
     ticket = Ticket.query.get_or_404(ticket_id)
     agents = User.query.filter(
         User.role.in_(['admin', 'agent'])).filter_by(active=True).all()
-    return render_template('tickets/detail.html', ticket=ticket, agents=agents)
+
+    participantes    = TicketParticipant.query.filter_by(ticket_id=ticket_id).all()
+    ids_participantes = {p.user_id for p in participantes}
+    todos_usuarios   = User.query.filter_by(active=True).order_by(User.name).all()
+
+    return render_template('tickets/detail.html',
+        ticket=ticket,
+        agents=agents,
+        participantes=participantes,
+        ids_participantes=ids_participantes,
+        todos_usuarios=todos_usuarios,
+    )
 
 
-# actualizar estado, prioridad y asignación
+# actualizar estado, prioridad, asignación y usuarios añadidos
 @tickets_bp.route('/<string:ticket_id>/update', methods=['POST'])
 @login_required
 def update_ticket(ticket_id):
@@ -107,23 +118,42 @@ def update_ticket(ticket_id):
         flash('No tienes permiso para hacer eso.', 'danger')
         return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
-    nuevo_agente_id = request.form.get('assigned_to') or None
+    nuevo_agente_id    = request.form.get('assigned_to') or None
     agente_anterior_id = ticket.assigned_to
-    estado_anterior = ticket.status
-    nuevo_estado = request.form.get('status', ticket.status)
+    estado_anterior    = ticket.status
+    nuevo_estado       = request.form.get('status', ticket.status)
 
-    ticket.status     = nuevo_estado
-    ticket.priority   = request.form.get('priority', ticket.priority)
+    ticket.status      = nuevo_estado
+    ticket.priority    = request.form.get('priority', ticket.priority)
     ticket.assigned_to = nuevo_agente_id
 
+    # Gestionar participantes del selector múltiple
+    ids_seleccionados = set(
+        int(i) for i in request.form.getlist('participantes_ids')
+    )
+    ids_actuales = {
+        p.user_id for p in TicketParticipant.query.filter_by(ticket_id=ticket_id).all()
+    }
 
-    # Añadir nuevo agente como participante si ha cambiado
+    # El creador nunca se puede eliminar
+    protegidos = {ticket.created_by}
+    a_eliminar = ids_actuales - ids_seleccionados - protegidos
+
+    for uid in a_eliminar:
+        TicketParticipant.query.filter_by(
+            ticket_id=ticket_id, user_id=uid).delete()
+
+    nuevos_ids = ids_seleccionados - ids_actuales
+    for uid in nuevos_ids:
+        _añadir_participante(ticket_id, uid)
+
+    # Forzar que creador y agente asignado siempre estén como participantes
+    _añadir_participante(ticket_id, ticket.created_by)
     if nuevo_agente_id:
         _añadir_participante(ticket_id, int(nuevo_agente_id))
 
     db.session.commit()
     participantes = _get_participantes(ticket_id)
-
 
     # Email si el agente ha cambiado
     if nuevo_agente_id and str(nuevo_agente_id) != str(agente_anterior_id):
@@ -131,10 +161,36 @@ def update_ticket(ticket_id):
         if agente:
             enviar_notificacion_asignacion(agente, ticket)
 
-
     # Email si el estado ha cambiado
     if nuevo_estado != estado_anterior:
         enviar_notificacion_cambio_estado(ticket, estado_anterior, participantes)
+
+    # Email a nuevos participantes añadidos
+    if nuevos_ids:
+        from app.utils.email import _enviar, _base_html
+        for uid in nuevos_ids:
+            nuevo = User.query.get(uid)
+            if nuevo:
+                html = _base_html(
+                    f'📋 Añadido al ticket {ticket_id}',
+                    f"""
+                    <p>Hola <strong>{nuevo.name}</strong>,</p>
+                    <p>Has sido añadido como participante en el ticket
+                       <strong>{ticket_id}: {ticket.title}</strong>.</p>
+                    <p>A partir de ahora recibirás notificaciones de todas las
+                       interacciones de este ticket.</p>
+                    <p style="color:#666; font-size:13px;">
+                        Estado: <strong>{ticket.status_label()}</strong> ·
+                        Prioridad: <strong>{ticket.priority_label()}</strong>
+                    </p>
+                    """
+                )
+                _enviar(
+                    [nuevo.email],
+                    f'[HelpDesk] Añadido al ticket {ticket_id}',
+                    html,
+                    thread_id=ticket.email_thread_id
+                )
 
     flash('Ticket actualizado.', 'success')
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
@@ -179,3 +235,58 @@ def delete_ticket(ticket_id):
 
     flash(f'Ticket {ticket_id} eliminado correctamente.', 'success')
     return redirect(url_for('tickets.list_tickets'))
+
+
+@tickets_bp.route('/<string:ticket_id>/add_participant', methods=['POST'])
+@login_required
+def add_participant(ticket_id):
+    ticket = Ticket.query.get_or_404(ticket_id)
+
+    # Solo admin o participantes actuales pueden añadir
+    es_participante = TicketParticipant.query.filter_by(
+        ticket_id=ticket_id, user_id=current_user.id).first()
+    if not current_user.is_admin() and not es_participante:
+        flash('No tienes permiso para añadir participantes.', 'danger')
+        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+    user_id = request.form.get('user_id')
+    if not user_id:
+        flash('Selecciona un usuario.', 'warning')
+        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+    user_id = int(user_id)
+    existe = TicketParticipant.query.filter_by(
+        ticket_id=ticket_id, user_id=user_id).first()
+    if existe:
+        flash('Ese usuario ya es participante del ticket.', 'warning')
+        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+    _añadir_participante(ticket_id, user_id)
+    db.session.commit()
+
+    nuevo = User.query.get(user_id)
+    # Notificar al nuevo participante
+    from app.utils.email import _enviar, _base_html
+    html = _base_html(
+        f'📋 Añadido al ticket #{ticket_id}',
+        f"""
+        <p>Hola <strong>{nuevo.name}</strong>,</p>
+        <p>Has sido añadido como participante en el ticket
+           <strong>{ticket_id}: {ticket.title}</strong>.</p>
+        <p>A partir de ahora recibirás notificaciones de todas las
+           interacciones de este ticket.</p>
+        <p style="color:#666; font-size:13px;">
+            Estado: <strong>{ticket.status_label()}</strong> ·
+            Prioridad: <strong>{ticket.priority_label()}</strong>
+        </p>
+        """
+    )
+    _enviar(
+        [nuevo.email],
+        f'[HelpDesk] Añadido al ticket {ticket_id}',
+        html,
+        thread_id=ticket.email_thread_id
+    )
+
+    flash(f'{nuevo.name} añadido como participante.', 'success')
+    return redirect(url_for('tickets.detail', ticket_id=ticket_id))

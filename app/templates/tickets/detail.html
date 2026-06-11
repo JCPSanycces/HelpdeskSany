@@ -61,47 +61,132 @@
 			</div>
 		</div>
 
-		<!-- Columna lateral (gestion - solo agentes/admin) -->
+		<!-- Columna lateral -->
+		{% set es_participante = participantes | selectattr('user_id', 'equalto', current_user.id) | list %}
+		{% if current_user.is_agent() or es_participante %}
+		<div class="col-lg-4">
+
+		<!-- Gestión del ticket -->
 		{% if current_user.is_agent() %}
-			<div class='col-lg-4'>
-				<div class='card'>
-					<div class='card-header bg-white fw-semibold'>Gestion del ticket</div>
-					<div class='card-body'>
-						<form method='POST' action='{{ url_for("tickets.update_ticket", ticket_id=ticket.ticket_id) }}'>
-							<div class='mb-3'>
-								<label class='form-label'>Estado</label>
-								<select name='status' class='form-select'>
-									{% for val, lbl in [('open','Abierto'),('in_progress','En progreso'),('pending','Pendiente'),('resolved','Resuelto'),('closed','Cerrado')] %}
-										<option value='{{ val }}' {% if ticket.status==val %}selected{% endif %}>{{ lbl }}</option>
-									{% endfor %}
-								</select>
-							</div>
+		<div class="card mb-3">
+			<div class="card-header bg-white fw-semibold">Gestión del ticket</div>
+			<div class="card-body">
+			<form method="POST"
+					action="{{ url_for('tickets.update_ticket', ticket_id=ticket.ticket_id) }}"
+					id="form-gestion">
 
-							<div class='mb-3'>
-								<label class='form-label'>Prioridad</label>
-								<select name='priority' class='form-select'>
-									{% for val, lbl in [('low','Baja'),('medium','Media'),('high','Alta'),('critical','Critica')] %}
-										<option value='{{ val }}' {% if ticket.priority==val %}selected{% endif %}>{{ lbl }}</option>
-									{% endfor %}
-								</select>
-							</div>
+				<div class="mb-3">
+				<label class="form-label">Estado</label>
+				<select name="status" class="form-select">
+					{% for val, lbl in [('open','Abierto'),('in_progress','En progreso'),
+						('pending','Pendiente'),('resolved','Resuelto'),('closed','Cerrado')] %}
+					<option value="{{ val }}" {% if ticket.status==val %}selected{% endif %}>{{ lbl }}</option>
+					{% endfor %}
+				</select>
+				</div>
 
-							<div class='mb-3'>
-								<label class='form-label'>Asignado a</label>
-								<select name='assigned_to' class='form-select'>
-									<option value=''>Sin asignar</option>
-									{% for a in agents %}
-										<option value='{{ a.id }}' {% if ticket.assigned_to==a.id %}selected{% endif %}>{{ a.name }}</option>
-									{% endfor %}
-								</select>
-							</div>
+				<div class="mb-3">
+				<label class="form-label">Prioridad</label>
+				<select name="priority" class="form-select">
+					{% for val, lbl in [('low','Baja'),('medium','Media'),('high','Alta'),('critical','Crítica')] %}
+					<option value="{{ val }}" {% if ticket.priority==val %}selected{% endif %}>{{ lbl }}</option>
+					{% endfor %}
+				</select>
+				</div>
 
-							<button type='submit' class='btn btn-primary w-100'>Guardar cambios</button>
-						</form>
-					</div>
+				<div class="mb-3">
+				<label class="form-label">Asignado a</label>
+				<select name="assigned_to" class="form-select">
+					<option value="">Sin asignar</option>
+					{% for a in agents %}
+					<option value="{{ a.id }}"
+					{% if ticket.assigned_to==a.id %}selected{% endif %}>{{ a.name }}</option>
+					{% endfor %}
+				</select>
+				</div>
+
+				<!-- Selector de participantes estilo tags -->
+				<div class="mb-3">
+				<label class="form-label">Participantes</label>
+				<select name="participantes_ids" id="select-participantes"
+        				multiple class="form-select">
+					{% for u in todos_usuarios %}
+					<option value="{{ u.id }}"
+						{% if u.id in ids_participantes %}selected{% endif %}
+						{% if u.id == ticket.created_by %}disabled data-locked="true"{% endif %}>
+						{{ u.name }}{% if u.id == ticket.created_by %} (solicitante){% endif %}
+						{% if u.id == ticket.assigned_to %} (asignado){% endif %}
+					</option>
+					{% endfor %}
+				</select>
+				<div class="form-text">Puedes añadir o quitar participantes.</div>
+				</div>
+
+				<button type="submit" class="btn btn-primary w-100">Guardar cambios</button>
+			</form>
+			</div>
+		</div>
+		{% endif %}
+
+		<!-- Lista visual de participantes (visible para todos) -->
+		<div class="card">
+			<div class="card-header bg-white fw-semibold d-flex align-items-center gap-2">
+			<i class="bi bi-people"></i> Participantes actuales
+			</div>
+			<div class="card-body py-2">
+			{% for p in participantes %}
+			<div class="d-flex align-items-center gap-2 py-1 border-bottom border-light">
+				<span class="rounded-circle bg-primary bg-opacity-10 text-primary
+							d-flex align-items-center justify-content-center fw-bold"
+						style="width:30px;height:30px;font-size:.75rem;flex-shrink:0">
+					{{ p.user.name[:2].upper() }}
+				</span>
+				<span style="font-size:.9rem">{{ p.user.name }}</span>
+				<div class="ms-auto d-flex gap-1 align-items-center">
+					{% if p.user_id == ticket.created_by %}
+						<span class="badge bg-secondary" style="font-size:.7rem">Solicitante</span>
+						<i class="bi bi-lock-fill text-muted" title="No se puede eliminar"
+							style="font-size:.75rem"></i>
+					{% elif p.user_id == ticket.assigned_to %}
+						<span class="badge bg-primary" style="font-size:.7rem">Asignado</span>
+					{% endif %}
 				</div>
 			</div>
+			{% endfor %}
+			</div>
+		</div>
+
+		</div>
 		{% endif %}
+
+		<!-- Tom Select para el selector de participantes -->
+		<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+		<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+		<script>
+			new TomSelect('#select-participantes', {
+				plugins: ['remove_button'],
+				placeholder: 'Buscar y añadir participantes...',
+				maxOptions: 100,
+				onInitialize: function() {
+				// Bloquear el item del creador para que no se pueda quitar
+				var creadorId = "{{ ticket.created_by }}";
+				if (this.items.includes(creadorId)) {
+					var item = this.getItem(creadorId);
+					if (item) {
+					var btn = item.querySelector('.remove');
+					if (btn) btn.remove();
+					item.classList.add('locked');
+					}
+				}
+				},
+				onItemRemove: function(value) {
+				// Doble seguridad: si intenta quitar al creador, lo vuelve a añadir
+				if (value === "{{ ticket.created_by }}") {
+					this.addItem(value, true);
+				}
+				}
+			});
+		</script>
 	</div>
 
 {% endblock %}
