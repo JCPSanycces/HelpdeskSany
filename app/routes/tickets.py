@@ -36,11 +36,11 @@ def _get_participantes(ticket_id):
 def list_tickets():
     status   = request.args.get('status', '')
     priority = request.args.get('priority', '')
+    category = request.args.get('category', '')
 
     if current_user.is_admin():
         query = Ticket.query
     else:
-        # Tickets donde el usuario es creador o participante
         tickets_participante = db.session.query(TicketParticipant.ticket_id)\
             .filter_by(user_id=current_user.id).subquery()
         query = Ticket.query.filter(
@@ -54,10 +54,12 @@ def list_tickets():
         query = query.filter_by(status=status)
     if priority:
         query = query.filter_by(priority=priority)
+    if category:
+        query = query.filter_by(category=category)
 
     tickets = query.order_by(Ticket.created_at.desc()).all()
     return render_template('tickets/list.html', tickets=tickets,
-                           status=status, priority=priority)
+                           status=status, priority=priority, category=category)
 
 
 # Crear nuevo ticket con opción de asignar a un agente
@@ -108,9 +110,13 @@ def detail(ticket_id):
     agents = User.query.filter(
         User.role.in_(['admin', 'agent'])).filter_by(active=True).all()
 
-    participantes    = TicketParticipant.query.filter_by(ticket_id=ticket_id).all()
+    participantes     = TicketParticipant.query.filter_by(ticket_id=ticket_id).all()
     ids_participantes = {p.user_id for p in participantes}
-    todos_usuarios   = User.query.filter_by(active=True).order_by(User.name).all()
+    todos_usuarios    = User.query.filter_by(active=True).order_by(User.name).all()
+    usuarios_disponibles = User.query.filter(
+        User.active == True,
+        ~User.id.in_(ids_participantes)
+    ).order_by(User.name).all()
 
     return render_template('tickets/detail.html',
         ticket=ticket,
@@ -118,6 +124,7 @@ def detail(ticket_id):
         participantes=participantes,
         ids_participantes=ids_participantes,
         todos_usuarios=todos_usuarios,
+        usuarios_disponibles=usuarios_disponibles,
     )
 
 
@@ -138,6 +145,7 @@ def update_ticket(ticket_id):
     ticket.status      = nuevo_estado
     ticket.priority    = request.form.get('priority', ticket.priority)
     ticket.assigned_to = nuevo_agente_id
+    ticket.category    = request.form.get('category', ticket.category)
 
     # Gestionar participantes del selector múltiple
     ids_seleccionados = set(

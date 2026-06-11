@@ -30,9 +30,16 @@
 								</select>
 							</div>
 
-							<div class='col-md-4'>
-								<label class='form-label fw-semibold'>Categoria</label>
-								<input type='text' name='category' class='form-control' placeholder='Ej: Hardware, Software, Red...'>
+							<div class="col-md-4">
+								<label class="form-label fw-semibold">Categoría</label>
+  									<select name="category" class="form-select">
+										<option value="">-- Seleccionar --</option>
+										<option value="SAGE X3">SAGE X3</option>
+										<option value="Software">Software</option>
+										<option value="Hardware">Hardware</option>
+										<option value="Redes e internet">Redes e internet</option>
+										<option value="EDI">EDI</option>
+									  </select>
 							</div>
 
 							{% if current_user.is_admin() %}

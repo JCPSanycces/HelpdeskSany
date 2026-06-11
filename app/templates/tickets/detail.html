@@ -27,9 +27,12 @@
 					<p class='text-muted mb-0'>{{ ticket.description }}</p>
 				</div>
 
-				<div class='card-footer bg-white text-muted' style='font-size:.85rem'>
-					Creado por {{ ticket.solicitante.name }} el
-					{{ ticket.created_at.strftime('%d/%m/%Y a las %H:%M') }}
+				<div class="card-footer bg-white text-muted" style="font-size:.85rem">
+  					Creado por {{ ticket.solicitante.name }} el
+  					{{ ticket.created_at.strftime('%d/%m/%Y a las %H:%M') }}
+  					{% if ticket.category %}
+  					· <span class="badge bg-light text-dark border">{{ ticket.category }}</span>
+  					{% endif %}
 				</div>
 			</div>
 
@@ -122,9 +125,45 @@
 				<div class="form-text">Puedes añadir o quitar participantes.</div>
 				</div>
 
+				<div class="mb-3">
+					<label class="form-label">Categoría</label>
+					{% if current_user.is_agent() %}
+					<select name="category" class="form-select">
+						<option value="">-- Sin categoría --</option>
+						<option value="SAGE X3"          {% if ticket.category=='SAGE X3' %}selected{% endif %}>SAGE X3</option>
+						<option value="Software"         {% if ticket.category=='Software' %}selected{% endif %}>Software</option>
+						<option value="Hardware"         {% if ticket.category=='Hardware' %}selected{% endif %}>Hardware</option>
+						<option value="Redes e internet" {% if ticket.category=='Redes e internet' %}selected{% endif %}>Redes e internet</option>
+						<option value="EDI"              {% if ticket.category=='EDI' %}selected{% endif %}>EDI</option>
+					</select>
+					{% else %}
+					<p class="form-control-plaintext">{{ ticket.category or '-' }}</p>
+					{% endif %}
+				</div>
+
 				<button type="submit" class="btn btn-primary w-100">Guardar cambios</button>
 			</form>
 			</div>
+		</div>
+		{% endif %}
+
+		{% if not current_user.is_agent() %}
+		<div class="card mb-3">
+		<div class="card-header bg-white fw-semibold">Información del ticket</div>
+		<div class="card-body">
+			<div class="mb-3">
+			<label class="form-label text-muted" style="font-size:.85rem">Estado</label>
+			<div><span class="badge badge-{{ ticket.status }}">{{ ticket.status_label() }}</span></div>
+			</div>
+			<div class="mb-3">
+			<label class="form-label text-muted" style="font-size:.85rem">Prioridad</label>
+			<div><span class="fw-semibold">{{ ticket.priority_label() }}</span></div>
+			</div>
+			<div class="mb-0">
+			<label class="form-label text-muted" style="font-size:.85rem">Categoría</label>
+			<div><span class="fw-semibold">{{ ticket.category or '-' }}</span></div>
+			</div>
+		</div>
 		</div>
 		{% endif %}
 
@@ -163,29 +202,30 @@
 		<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 		<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 		<script>
+		var selectEl = document.getElementById('select-participantes');
+		if (selectEl) {
 			new TomSelect('#select-participantes', {
-				plugins: ['remove_button'],
-				placeholder: 'Buscar y añadir participantes...',
-				maxOptions: 100,
-				onInitialize: function() {
-				// Bloquear el item del creador para que no se pueda quitar
+			plugins: ['remove_button'],
+			placeholder: 'Buscar y añadir participantes...',
+			maxOptions: 100,
+			onInitialize: function() {
 				var creadorId = "{{ ticket.created_by }}";
 				if (this.items.includes(creadorId)) {
-					var item = this.getItem(creadorId);
-					if (item) {
+				var item = this.getItem(creadorId);
+				if (item) {
 					var btn = item.querySelector('.remove');
 					if (btn) btn.remove();
 					item.classList.add('locked');
-					}
 				}
-				},
-				onItemRemove: function(value) {
-				// Doble seguridad: si intenta quitar al creador, lo vuelve a añadir
+				}
+			},
+			onItemRemove: function(value) {
 				if (value === "{{ ticket.created_by }}") {
-					this.addItem(value, true);
+				this.addItem(value, true);
 				}
-				}
+			}
 			});
+		}
 		</script>
 	</div>
 

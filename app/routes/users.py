@@ -65,7 +65,7 @@ def toggle_user(user_id):
         db.session.commit()
         state = 'activado' if u.active else 'desactivado'
         flash(f'Usuario {u.name} {state}.', 'success')
-        return redirect(url_for('users.list_users'))
+    return redirect(url_for('users.list_users'))
 
 
 # modificar usuarios

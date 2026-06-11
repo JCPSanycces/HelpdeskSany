@@ -35,6 +35,18 @@
 					</select>
 				</div>
 
+				<div class="col-auto">
+  					<label class="form-label mb-0">Categoría</label>
+  					<select name="category" class="form-select form-select-sm">
+						<option value="">Todas</option>
+						<option value="SAGE X3"         {% if category=='SAGE X3' %}selected{% endif %}>SAGE X3</option>
+						<option value="Software"        {% if category=='Software' %}selected{% endif %}>Software</option>
+						<option value="Hardware"        {% if category=='Hardware' %}selected{% endif %}>Hardware</option>
+						<option value="Redes e internet"{% if category=='Redes e internet' %}selected{% endif %}>Redes e internet</option>
+						<option value="EDI"             {% if category=='EDI' %}selected{% endif %}>EDI</option>
+					</select>
+				</div>
+
 				<div class='col-auto'>
 					<button type='submit' class='btn btn-secondary btn-sm'>Filtrar</button>
 					<a href='{{ url_for("tickets.list_tickets") }}' class='btn btn-link btn-sm'>Limpiar</a>
@@ -51,6 +63,7 @@
 						<th>#</th>
 						<th>Asunto</th>
 						<th>Solicitante</th>
+						<th>Categoría</th>
 						<th>Estado</th>
 						<th>Prioridad</th>
 						<th>Fecha</th>
@@ -59,44 +72,33 @@
 				</thead>
 				<tbody>
 					{% for t in tickets %}
-						<tr onclick="location='{{ url_for("tickets.detail", ticket_id=t.ticket_id) }}'" style='cursor:pointer'>
-							<td>#{{ t.ticket_id }}</td>
-							<td>{{ t.title }}</td>
-							<td>{{ t.solicitante.name if t.solicitante else '-' }}</td>
-							<td>
-								<span class='badge badge-{{ t.status }}'>{{ t.status_label() }}</span>
-							</td>
-							<td>{{ t.priority_label() }}</td>
-							<td>{{ t.created_at.strftime('%d/%m/%Y') }}</td>
-							{% if current_user.is_admin() %}
-							<td onclick="event.stopPropagation()">
-							<form method="POST"
-									action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
-									onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}? Esta acción no se puede deshacer.')">
-								<button type="submit" class="btn btn-sm btn-outline-danger">
-								<i class="bi bi-trash"></i>
-								</button>
-							</form>
-							</td>
-							{% endif %}
-						</tr>
+					<tr onclick="location='{{ url_for("tickets.detail", ticket_id=t.ticket_id) }}'" style="cursor:pointer">
+						<td>{{ t.ticket_id }}</td>
+						<td>{{ t.title }}</td>
+						<td>{{ t.solicitante.name if t.solicitante else '-' }}</td>
+						<td>{{ t.category or '-' }}</td>
+						<td><span class="badge badge-{{ t.status }}">{{ t.status_label() }}</span></td>
+						<td>{{ t.priority_label() }}</td>
+						<td>{{ t.created_at.strftime('%d/%m/%Y') }}</td>
+						{% if current_user.is_admin() %}
+						<td onclick="event.stopPropagation()">
+						<form method="POST"
+								action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
+								onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}? Esta acción no se puede deshacer.')">
+							<button type="submit" class="btn btn-sm btn-outline-danger">
+							<i class="bi bi-trash"></i>
+							</button>
+						</form>
+						</td>
+						{% endif %}
+					</tr>
 					{% else %}
-						<tr>
-							<td colspan='6' class='text-center py-4 text-muted'>No hay tickets</td>
-							{% if current_user.is_admin() %}
-							<td onclick="event.stopPropagation()">
-							<form method="POST"
-									action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
-									onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}? Esta acción no se puede deshacer.')">
-								<button type="submit" class="btn btn-sm btn-outline-danger">
-								<i class="bi bi-trash"></i>
-								</button>
-							</form>
-							</td>
-							{% endif %}
-						</tr>
+					<tr>
+						<td colspan="{% if current_user.is_admin() %}8{% else %}7{% endif %}"
+							class="text-center py-4 text-muted">No hay tickets</td>
+					</tr>
 					{% endfor %}
-				</tbody>
+					</tbody>
 			</table>
 		</div>
 	</div>
