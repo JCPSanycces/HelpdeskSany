@@ -36,13 +36,25 @@ def _get_participantes(ticket_id):
 def list_tickets():
     status   = request.args.get('status', '')
     priority = request.args.get('priority', '')
-    query    = Ticket.query
-    if not current_user.is_agent():
-        query = query.filter_by(created_by=current_user.id)
+
+    if current_user.is_admin():
+        query = Ticket.query
+    else:
+        # Tickets donde el usuario es creador o participante
+        tickets_participante = db.session.query(TicketParticipant.ticket_id)\
+            .filter_by(user_id=current_user.id).subquery()
+        query = Ticket.query.filter(
+            db.or_(
+                Ticket.created_by == current_user.id,
+                Ticket.ticket_id.in_(tickets_participante)
+            )
+        )
+
     if status:
         query = query.filter_by(status=status)
     if priority:
         query = query.filter_by(priority=priority)
+
     tickets = query.order_by(Ticket.created_at.desc()).all()
     return render_template('tickets/list.html', tickets=tickets,
                            status=status, priority=priority)
