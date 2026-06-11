@@ -77,6 +77,19 @@ def index():
         'closed':      total_closed,
     }
 
+
+    # Distribución por categoría
+    categorias = {}
+    for cat in ['SAGE X3', 'Software', 'Hardware', 'Redes e internet', 'EDI']:
+        categorias[cat] = base_query.filter_by(category=cat).count()
+    sin_categoria = base_query.filter(
+        db.or_(Ticket.category == None, Ticket.category == '')
+    ).count()
+    if sin_categoria:
+        categorias['Sin categoría'] = sin_categoria
+
+
+
     return render_template('dashboard.html',
         total_open=total_open,
         total_progress=total_progress,
@@ -89,4 +102,5 @@ def index():
         meses_cerrados=json.dumps(meses_cerrados),
         prioridades=json.dumps(prioridades),
         estados=json.dumps(estados),
+        categorias=json.dumps(categorias),
     )
