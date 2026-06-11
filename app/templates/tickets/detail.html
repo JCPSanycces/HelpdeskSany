@@ -45,7 +45,7 @@
 					<strong style='font-size:.9rem'>{{ c.author.name }}</strong>
 					<small class='text-muted'>{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
 					</div>
-					<p class='mb-0' style='font-size:.9rem'>{{ c.body }}</p>
+					<p class='mb-0' style='font-size:.9rem; white-space: pre-wrap;'>{{ c.body }}</p>
 
 					{% set adjuntos = c.attachments.all() %}
 					{% if adjuntos %}
