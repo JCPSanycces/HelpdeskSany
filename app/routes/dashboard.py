@@ -3,6 +3,9 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.ticket import Ticket
 from app.models.ticket_participant import TicketParticipant
+from datetime import datetime, timedelta
+from sqlalchemy import func
+import json
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -25,8 +28,54 @@ def index():
     total_progress = base_query.filter_by(status='in_progress').count()
     total_resolved = base_query.filter_by(status='resolved').count()
     total_closed   = base_query.filter_by(status='closed').count()
-
     recent_tickets = base_query.order_by(Ticket.created_at.desc()).limit(10).all()
+
+    # ── Datos para gráficos ──────────────────────────────
+    hoy = datetime.utcnow()
+    meses_labels = []
+    meses_abiertos = []
+    meses_resueltos = []
+    meses_cerrados  = []
+
+    for i in range(5, -1, -1):
+        # Primer y último día del mes
+        primer_dia = (hoy.replace(day=1) - timedelta(days=1)).replace(day=1) \
+            if i == 0 else \
+            (hoy - timedelta(days=30 * i)).replace(day=1)
+        # Calcular mes/año correctamente
+        mes = hoy.month - i
+        año = hoy.year
+        while mes <= 0:
+            mes += 12
+            año -= 1
+        primer_dia = datetime(año, mes, 1)
+        if mes == 12:
+            ultimo_dia = datetime(año + 1, 1, 1)
+        else:
+            ultimo_dia = datetime(año, mes + 1, 1)
+
+        meses_labels.append(primer_dia.strftime('%b %Y'))
+
+        q = base_query.filter(
+            Ticket.created_at >= primer_dia,
+            Ticket.created_at < ultimo_dia
+        )
+        meses_abiertos.append(q.filter_by(status='open').count())
+        meses_resueltos.append(q.filter_by(status='resolved').count())
+        meses_cerrados.append(q.filter_by(status='closed').count())
+
+    # Distribución por prioridad
+    prioridades = {}
+    for pri in ['low', 'medium', 'high', 'critical']:
+        prioridades[pri] = base_query.filter_by(priority=pri).count()
+
+    # Tickets por estado (totales para donut)
+    estados = {
+        'open':        total_open,
+        'in_progress': total_progress,
+        'resolved':    total_resolved,
+        'closed':      total_closed,
+    }
 
     return render_template('dashboard.html',
         total_open=total_open,
@@ -34,4 +83,10 @@ def index():
         total_resolved=total_resolved,
         total_closed=total_closed,
         recent_tickets=recent_tickets,
+        meses_labels=json.dumps(meses_labels),
+        meses_abiertos=json.dumps(meses_abiertos),
+        meses_resueltos=json.dumps(meses_resueltos),
+        meses_cerrados=json.dumps(meses_cerrados),
+        prioridades=json.dumps(prioridades),
+        estados=json.dumps(estados),
     )

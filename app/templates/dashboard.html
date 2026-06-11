@@ -1,118 +1,230 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard{% endblock %}
-
 {% block content %}
-	<div class='d-flex justify-content-between align-items-center mb-4'>
-		<h4 class='mb-0'>Dashboard</h4>
-		<a href='{{ url_for("tickets.new_ticket") }}' class='btn btn-primary btn-sm'>
-			<i class='bi bi-plus-lg'></i> Nuevo ticket
-		</a>
-	</div>
 
-	<!-- Tarjetas de estadisticas -->
-	<div class="row g-3 mb-4">
-	<div class="col-md-3">
-		<a href="{{ url_for('tickets.list_tickets', status='open') }}" class="text-decoration-none">
-		<div class="card text-center border-0 bg-primary bg-opacity-10 h-100"
-			style="cursor:pointer; transition:.2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-			<div class="card-body">
-			<div class="fs-2 fw-bold text-primary">{{ total_open }}</div>
-			<div class="text-muted">Abiertos</div>
-			</div>
-		</div>
-		</a>
-	</div>
-	<div class="col-md-3">
-		<a href="{{ url_for('tickets.list_tickets', status='in_progress') }}" class="text-decoration-none">
-		<div class="card text-center border-0 bg-warning bg-opacity-10 h-100"
-			style="cursor:pointer; transition:.2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-			<div class="card-body">
-			<div class="fs-2 fw-bold text-warning">{{ total_progress }}</div>
-			<div class="text-muted">En progreso</div>
-			</div>
-		</div>
-		</a>
-	</div>
-	<div class="col-md-3">
-		<a href="{{ url_for('tickets.list_tickets', status='resolved') }}" class="text-decoration-none">
-		<div class="card text-center border-0 bg-success bg-opacity-10 h-100"
-			style="cursor:pointer; transition:.2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-			<div class="card-body">
-			<div class="fs-2 fw-bold text-success">{{ total_resolved }}</div>
-			<div class="text-muted">Resueltos</div>
-			</div>
-		</div>
-		</a>
-	</div>
-	<div class="col-md-3">
-		<a href="{{ url_for('tickets.list_tickets', status='closed') }}" class="text-decoration-none">
-		<div class="card text-center border-0 bg-secondary bg-opacity-10 h-100"
-			style="cursor:pointer; transition:.2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
-			<div class="card-body">
-			<div class="fs-2 fw-bold text-secondary">{{ total_closed }}</div>
-			<div class="text-muted">Cerrados</div>
-			</div>
-		</div>
-		</a>
-	</div>
-	</div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">Dashboard</h4>
+  <a href="{{ url_for('tickets.new_ticket') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Nuevo ticket
+  </a>
+</div>
 
-	<!-- Tabla de tickets recientes -->
-	<div class='card'>
-		<div class='card-header bg-white fw-semibold'>Tickets recientes</div>
-		<div class='table-responsive'>
-			<table class='table table-hover mb-0'>
-				<thead class='table-light'>
-					<tr>
-						<th>#</th>
-						<th>Asunto</th>
-						<th>Estado</th>
-						<th>Prioridad</th>
-						<th>Fecha</th>
-						{% if current_user.is_admin() %}<th></th>{% endif %}
-					</tr>
-				</thead>
-				<tbody>
-					{% for t in recent_tickets %}
-						<tr onclick="location='{{ url_for("tickets.detail", ticket_id=t.ticket_id) }}'" style='cursor:pointer'>
-							<td class='text-muted'>#{{ t.ticket_id }}</td>
-							<td>{{ t.title }}</td>
-							<td>
-								<span class='badge badge-{{ t.status }}'>{{ t.status_label() }}</span>
-							</td>
-							<td>{{ t.priority_label() }}</td>
-							<td class='text-muted'>{{ t.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
-							{% if current_user.is_admin() %}
-							<td onclick="event.stopPropagation()">
-							<form method="POST"
-									action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
-									onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}? Esta acción no se puede deshacer.')">
-								<button type="submit" class="btn btn-sm btn-outline-danger">
-								<i class="bi bi-trash"></i>
-								</button>
-							</form>
-							</td>
-							{% endif %}
-						</tr>
-					{% else %}
-						<tr>
-							<td colspan='5' class='text-center text-muted py-4'>No hay tickets</td>
-							{% if current_user.is_admin() %}
-							<td onclick="event.stopPropagation()">
-							<form method="POST"
-									action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
-									onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}? Esta acción no se puede deshacer.')">
-								<button type="submit" class="btn btn-sm btn-outline-danger">
-								<i class="bi bi-trash"></i>
-								</button>
-							</form>
-							</td>
-							{% endif %}							
-						</tr>
-					{% endfor %}
-				</tbody>
-			</table>
-		</div>
-	</div>
+<!-- Tarjetas de estadísticas -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <a href="{{ url_for('tickets.list_tickets', status='open') }}" class="text-decoration-none">
+      <div class="card text-center border-0 bg-primary bg-opacity-10 h-100"
+           style="cursor:pointer;transition:.2s"
+           onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <div class="card-body">
+          <div class="fs-2 fw-bold text-primary">{{ total_open }}</div>
+          <div class="text-muted">Abiertos</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('tickets.list_tickets', status='in_progress') }}" class="text-decoration-none">
+      <div class="card text-center border-0 bg-warning bg-opacity-10 h-100"
+           style="cursor:pointer;transition:.2s"
+           onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <div class="card-body">
+          <div class="fs-2 fw-bold text-warning">{{ total_progress }}</div>
+          <div class="text-muted">En progreso</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('tickets.list_tickets', status='resolved') }}" class="text-decoration-none">
+      <div class="card text-center border-0 bg-success bg-opacity-10 h-100"
+           style="cursor:pointer;transition:.2s"
+           onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <div class="card-body">
+          <div class="fs-2 fw-bold text-success">{{ total_resolved }}</div>
+          <div class="text-muted">Resueltos</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('tickets.list_tickets', status='closed') }}" class="text-decoration-none">
+      <div class="card text-center border-0 bg-secondary bg-opacity-10 h-100"
+           style="cursor:pointer;transition:.2s"
+           onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <div class="card-body">
+          <div class="fs-2 fw-bold text-secondary">{{ total_closed }}</div>
+          <div class="text-muted">Cerrados</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row g-3 mb-3">
+
+	<!-- Evolución de tickets (líneas) -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-graph-up text-primary me-2"></i>Evolución de tickets (últimos 6 meses)
+      </div>
+      <div class="card-body py-2" style="height:250px; overflow:hidden;">
+        <canvas id="chartEvolucion" style="width:100% !important;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donut prioridad -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-pie-chart text-primary me-2"></i>Por prioridad
+      </div>
+      <div class="card-body py-2 d-flex align-items-center justify-content-center"
+           style="height:250px; overflow:hidden;">
+        <canvas id="chartPrioridad"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="row g-3 mb-3">
+
+	<!-- Estado por mes (barras) -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-bar-chart text-primary me-2"></i>Estado por mes
+      </div>
+      <div class="card-body py-2" style="height:250px; overflow:hidden;">
+        <canvas id="chartEstadoMes" style="width:100% !important;"></canvas>
+      </div>
+    </div>
+  </div>
+
+   <!-- Donut estado -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header bg-white fw-semibold">
+        <i class="bi bi-pie-chart text-primary me-2"></i>Por estado
+      </div>
+      <div class="card-body py-2 d-flex align-items-center justify-content-center"
+           style="height:250px; overflow:hidden;">
+        <canvas id="chartEstado"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const mesesLabels  = {{ meses_labels | safe }};
+const abiertos     = {{ meses_abiertos | safe }};
+const resueltos    = {{ meses_resueltos | safe }};
+const cerrados     = {{ meses_cerrados | safe }};
+const prioridades  = {{ prioridades | safe }};
+const estados      = {{ estados | safe }};
+
+// Gráfico evolución (líneas)
+new Chart(document.getElementById('chartEvolucion'), {
+  type: 'line',
+  data: {
+    labels: mesesLabels,
+    datasets: [
+      {
+        label: 'Abiertos',
+        data: abiertos,
+        borderColor: '#185FA5',
+        backgroundColor: 'rgba(24,95,165,.1)',
+        tension: .4, fill: true, pointRadius: 4,
+      },
+      {
+        label: 'Resueltos',
+        data: resueltos,
+        borderColor: '#3B6D11',
+        backgroundColor: 'rgba(59,109,17,.08)',
+        tension: .4, fill: true, pointRadius: 4,
+      },
+      {
+        label: 'Cerrados',
+        data: cerrados,
+        borderColor: '#888',
+        backgroundColor: 'rgba(136,136,136,.07)',
+        tension: .4, fill: true, pointRadius: 4,
+      },
+    ]
+  },
+  options: {
+    responsive: true,
+	maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+  }
+});
+
+// Gráfico barras estado por mes
+new Chart(document.getElementById('chartEstadoMes'), {
+  type: 'bar',
+  data: {
+    labels: mesesLabels,
+    datasets: [
+      { label: 'Abiertos',  data: abiertos,  backgroundColor: 'rgba(24,95,165,.75)' },
+      { label: 'Resueltos', data: resueltos, backgroundColor: 'rgba(59,109,17,.75)' },
+      { label: 'Cerrados',  data: cerrados,  backgroundColor: 'rgba(136,136,136,.6)' },
+    ]
+  },
+  options: {
+    responsive: true,
+	maintainAspectRatio: false,
+    plugins: { legend: { position: 'top' } },
+    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+  }
+});
+
+// Donut prioridad
+new Chart(document.getElementById('chartPrioridad'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Baja', 'Media', 'Alta', 'Crítica'],
+    datasets: [{
+      data: [prioridades.low, prioridades.medium, prioridades.high, prioridades.critical],
+      backgroundColor: ['#3B6D11','#185FA5','#854F0B','#A32D2D'],
+      borderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12 } }
+    },
+    cutout: '65%',
+  }
+});
+
+// Donut estado
+new Chart(document.getElementById('chartEstado'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Abiertos', 'En progreso', 'Resueltos', 'Cerrados'],
+    datasets: [{
+      data: [estados.open, estados.in_progress, estados.resolved, estados.closed],
+      backgroundColor: ['#185FA5','#E65100','#3B6D11','#888'],
+      borderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12 } }
+    },
+    cutout: '65%',
+  }
+});
+</script>
 
 {% endblock %}
