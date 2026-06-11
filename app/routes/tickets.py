@@ -11,6 +11,8 @@ from app.utils.email import (
     enviar_notificacion_comentario,
     enviar_notificacion_cambio_estado,
 )
+from app.utils.uploads import guardar_adjunto
+from app.models.comment_attachment import CommentAttachment
 
 tickets_bp = Blueprint('tickets', __name__)
 
@@ -226,8 +228,21 @@ def add_comment(ticket_id):
     if body:
         c = Comment(body=body, ticket_id=ticket_id, user_id=current_user.id)
         db.session.add(c)
+        db.session.flush()  # Para tener c.id antes del commit
 
-        # Registrar al comentarista como participante
+        # Guardar todos los ficheros adjuntos
+        ficheros = request.files.getlist('adjuntos')
+        for file in ficheros:
+            resultado = guardar_adjunto(file)
+            if resultado:
+                adjunto = CommentAttachment(
+                    comment_id=c.id,
+                    filename=resultado['filename'],
+                    file_path=resultado['file_path'],
+                    file_type=resultado['file_type'],
+                )
+                db.session.add(adjunto)
+
         _añadir_participante(ticket_id, current_user.id)
         db.session.commit()
 

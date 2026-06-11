@@ -21,6 +21,13 @@ class Config:
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
 
+    # Subida de ficheros
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 'app', 'static', 'uploads', 'comments')
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB máximo por fichero
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    
+
 class DevelopmentConfig(Config):
     DEBUG = True # Muestra errores detallados
 

@@ -39,29 +39,95 @@
 			<!-- Comentarios -->
 			<h6 class='fw-semibold mb-3'>Comentarios</h6>
 			{% for c in ticket.comments.order_by('created_at') %}
-				<div class='card mb-2'>
-					<div class='card-body py-2'>
-						<div class='d-flex justify-content-between mb-1'>
-							<strong style='font-size:.9rem'>{{ c.author.name }}</strong>
-							<small class='text-muted'>{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
-						</div>
-						<p class='mb-0' style='font-size:.9rem'>{{ c.body }}</p>
+			<div class='card mb-2'>
+				<div class='card-body py-2'>
+					<div class='d-flex justify-content-between mb-1'>
+					<strong style='font-size:.9rem'>{{ c.author.name }}</strong>
+					<small class='text-muted'>{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
 					</div>
+					<p class='mb-0' style='font-size:.9rem'>{{ c.body }}</p>
+
+					{% set adjuntos = c.attachments.all() %}
+					{% if adjuntos %}
+					<div class="mt-2">
+
+					<!-- Imágenes -->
+					{% set imagenes = adjuntos | selectattr('file_type', 'equalto', 'imagen') | list %}
+					{% if imagenes %}
+					<div class="d-flex flex-wrap gap-2 mb-2">
+						{% for img in imagenes %}
+						<a href="{{ url_for('static', filename=img.file_path) }}" target="_blank">
+						<img src="{{ url_for('static', filename=img.file_path) }}"
+							alt="{{ img.filename }}"
+							class="rounded border"
+							style="max-height:120px; max-width:180px; object-fit:cover; cursor:zoom-in;">
+						</a>
+						{% endfor %}
+					</div>
+					{% endif %}
+
+					<!-- Documentos -->
+					{% set documentos = adjuntos | selectattr('file_type', 'equalto', 'documento') | list %}
+					{% if documentos %}
+					<div class="d-flex flex-wrap gap-2">
+						{% for doc in documentos %}
+						<a href="{{ url_for('static', filename=doc.file_path) }}"
+						download="{{ doc.filename }}"
+						class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+						{% set ext = doc.filename.rsplit('.', 1)[-1].lower() %}
+						{% if ext == 'pdf' %}
+							<i class="bi bi-file-earmark-pdf text-danger"></i>
+						{% elif ext in ['docx', 'doc'] %}
+							<i class="bi bi-file-earmark-word text-primary"></i>
+						{% elif ext in ['xlsx', 'xls'] %}
+							<i class="bi bi-file-earmark-excel text-success"></i>
+						{% elif ext in ['pptx', 'ppt'] %}
+							<i class="bi bi-file-earmark-ppt text-warning"></i>
+						{% else %}
+							<i class="bi bi-file-earmark-text"></i>
+						{% endif %}
+						{{ doc.filename }}
+						</a>
+						{% endfor %}
+					</div>
+					{% endif %}
+
+					</div>
+					{% endif %}
+
 				</div>
+			</div>
 			{% else %}
-				<p class='text-muted'>Aun no hay comentarios.</p>
+			<p class='text-muted'>Aún no hay comentarios.</p>
 			{% endfor %}
 
 			<!-- Formulario de comentario -->
 			<div class='card mt-3'>
-				<div class='card-body'>
-					<form method='POST' action='{{ url_for("tickets.add_comment", ticket_id=ticket.ticket_id) }}'>
-						<label class='form-label fw-semibold'>Anadir comentario</label>
-						<textarea name='body' class='form-control mb-2' rows='3' placeholder='Escribe aqui...' required></textarea>
-						<button type='submit' class='btn btn-primary btn-sm'>Enviar</button>
-					</form>
+			<div class='card-body'>
+				<form method='POST'
+					action='{{ url_for("tickets.add_comment", ticket_id=ticket.ticket_id) }}'
+					enctype="multipart/form-data">
+				<label class='form-label fw-semibold'>Añadir comentario</label>
+				<textarea name='body' class='form-control mb-2' rows='3'
+							placeholder='Escribe aquí...' required></textarea>
+
+				<div class="mb-2">
+					<label class="form-label text-muted" style="font-size:.85rem">
+					<i class="bi bi-paperclip"></i> Adjuntar ficheros (opcional)
+					</label>
+					<input type="file" name="adjuntos" class="form-control form-control-sm"
+						accept=".png,.jpg,.jpeg,.gif,.webp,.txt,.docx,.pptx,.xlsx,.pdf"
+						multiple>
+					<div class="form-text">
+					Imágenes (PNG, JPG, GIF, WEBP) o documentos (TXT, DOCX, PPTX, XLSX, PDF) · Máx. 5 MB por fichero
+					</div>
 				</div>
+
+				<button type='submit' class='btn btn-primary btn-sm'>Enviar</button>
+				</form>
 			</div>
+			</div>
+
 		</div>
 
 		<!-- Columna lateral -->
