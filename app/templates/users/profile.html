@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Mi perfil{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <h4 class="mb-4">Mi perfil</h4>
+
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-semibold">Información de la cuenta</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label text-muted" style="font-size:.85rem">Email</label>
+          <div class="fw-semibold">{{ u.email }}</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-muted" style="font-size:.85rem">Rol</label>
+          <div>
+            {% if u.role == 'admin' %}
+              <span class="badge bg-danger">Administrador</span>
+            {% elif u.role == 'agent' %}
+              <span class="badge bg-primary">Agente</span>
+            {% else %}
+              <span class="badge bg-secondary">Usuario</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="mb-0">
+          <label class="form-label text-muted" style="font-size:.85rem">Departamento</label>
+          <div class="fw-semibold">{{ u.department or '-' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header bg-white fw-semibold">Editar perfil</div>
+      <div class="card-body">
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nombre completo</label>
+            <input type="text" name="name" class="form-control" value="{{ u.name }}" required>
+          </div>
+
+          <hr class="my-4">
+
+          <h6 class="fw-semibold mb-3">Cambiar contraseña</h6>
+          <div class="form-text mb-3">
+            Deja estos campos en blanco si no quieres cambiar la contraseña.
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Contraseña actual</label>
+            <input type="password" name="current_password" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nueva contraseña</label>
+            <input type="password" name="new_password" class="form-control">
+            <div class="form-text">Mínimo 6 caracteres.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Repetir nueva contraseña</label>
+            <input type="password" name="confirm_password" class="form-control">
+          </div>
+
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

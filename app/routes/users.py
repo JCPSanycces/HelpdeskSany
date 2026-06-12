@@ -114,3 +114,42 @@ def delete_user(user_id):
     db.session.commit()
     flash(f'Usuario {u.name} eliminado.', 'success')
     return redirect(url_for('users.list_users'))
+
+
+# perfil de usuario (modificar datos propios y cambiar contraseña)
+@users_bp.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    u = current_user
+
+    if request.method == 'POST':
+        nombre_nuevo = request.form.get('name', '').strip()
+        password_actual = request.form.get('current_password', '').strip()
+        password_nueva  = request.form.get('new_password', '').strip()
+        password_repetir = request.form.get('confirm_password', '').strip()
+
+        if nombre_nuevo:
+            u.name = nombre_nuevo
+
+        # Solo cambiar contraseña si se han rellenado los campos
+        if password_nueva:
+            if not password_actual or not u.check_password(password_actual):
+                flash('La contraseña actual no es correcta.', 'danger')
+                return render_template('users/profile.html', u=u)
+
+            if password_nueva != password_repetir:
+                flash('Las contraseñas nuevas no coinciden.', 'danger')
+                return render_template('users/profile.html', u=u)
+
+            if len(password_nueva) < 6:
+                flash('La nueva contraseña debe tener al menos 6 caracteres.', 'danger')
+                return render_template('users/profile.html', u=u)
+
+            u.set_password(password_nueva)
+            flash('Contraseña actualizada correctamente.', 'success')
+
+        db.session.commit()
+        flash('Perfil actualizado correctamente.', 'success')
+        return redirect(url_for('users.profile'))
+
+    return render_template('users/profile.html', u=u)
