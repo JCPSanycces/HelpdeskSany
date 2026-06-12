@@ -197,7 +197,7 @@
 				<div class="mb-3">
 					<label class="form-label">Categoría</label>
 					{% if current_user.is_agent() %}
-					<select name="category" class="form-select">
+					<select name="category" class="form-select" required>
 						<option value="">-- Sin categoría --</option>
 						<option value="SAGE X3"          {% if ticket.category=='SAGE X3' %}selected{% endif %}>SAGE X3</option>
 						<option value="Software"         {% if ticket.category=='Software' %}selected{% endif %}>Software</option>
