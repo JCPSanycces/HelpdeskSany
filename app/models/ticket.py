@@ -38,7 +38,7 @@ class Ticket(db.Model):
     'low': 'Baja',
     'medium': 'Media',
     'high': 'Alta',
-    'critical': 'Critica',
+    'critical': 'Crítica',
     }
 
 
