@@ -14,11 +14,6 @@
 							<input type='text' name='title' class='form-control' required placeholder='Describe brevemente el problema'>
 						</div>
 
-						<div class='mb-3'>
-							<label class='form-label fw-semibold'>Descripcion detallada *</label>
-							<textarea name='description' class='form-control' rows='5' required placeholder='Explica el problema con todo el detalle posible...'></textarea>
-						</div>
-
 						<div class='row g-3'>
 							<div class='col-md-4'>
 								<label class='form-label fw-semibold'>Prioridad</label>
@@ -26,7 +21,7 @@
 									<option value='low'>Baja</option>
 									<option value='medium' selected>Media</option>
 									<option value='high'>Alta</option>
-									<option value='critical'>Critica</option>
+									<option value='critical'>Crítica</option>
 								</select>
 							</div>
 
@@ -53,6 +48,11 @@
 								</select>
 							</div>
 							{% endif %}
+						</div>
+
+						<div class='mb-3'>
+							<label class='form-label fw-semibold'>Descripción detallada *</label>
+							<textarea name='description' class='form-control' rows='5' required placeholder='Explica el problema con todo el detalle posible...'></textarea>
 						</div>
 
 						<div class="mb-3 mt-3">
