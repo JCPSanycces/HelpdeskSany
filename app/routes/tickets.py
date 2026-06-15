@@ -15,6 +15,8 @@ from app.utils.uploads import guardar_adjunto
 from app.models.comment_attachment import CommentAttachment
 from flask import jsonify
 from app.utils.sanitize import limpiar_html
+from datetime import datetime
+from app.utils.uploads import guardar_adjunto, eliminar_adjunto_fichero
 
 tickets_bp = Blueprint('tickets', __name__)
 
@@ -382,3 +384,73 @@ def upload_description_image():
         url = url_for('static', filename=resultado['file_path'])
         return jsonify({'url': url})
     return jsonify({'error': 'No se pudo subir la imagen'}), 400
+
+
+# Edición de descripción del ticket (solo para agentes o el creador)
+@tickets_bp.route('/<string:ticket_id>/edit', methods=['POST'])
+@login_required
+def edit_ticket_description(ticket_id):
+    ticket = Ticket.query.get_or_404(ticket_id)
+
+    # Solo el creador, agentes o admin pueden editar
+    if not (current_user.is_agent() or ticket.created_by == current_user.id):
+        flash('No tienes permiso para editar este ticket.', 'danger')
+        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+
+    if title:
+        ticket.title = title
+    if description:
+        ticket.description = limpiar_html(description)
+
+    db.session.commit()
+    flash('Ticket actualizado correctamente.', 'success')
+    return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+
+# Edición de comentario (solo para el autor o admin)
+@tickets_bp.route('/<string:ticket_id>/comment/<int:comment_id>/edit', methods=['POST'])
+@login_required
+def edit_comment(ticket_id, comment_id):
+    c = Comment.query.get_or_404(comment_id)
+
+    if c.ticket_id != ticket_id:
+        flash('Comentario no encontrado.', 'danger')
+        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+    # Solo el autor o un admin pueden editar
+    if not (c.user_id == current_user.id or current_user.is_admin()):
+        flash('No tienes permiso para editar este comentario.', 'danger')
+        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+    body = request.form.get('body', '').strip()
+    if body:
+        c.body = limpiar_html(body)
+        c.updated_at = datetime.utcnow()
+
+    # Eliminar adjuntos marcados
+    eliminar_ids = request.form.getlist('eliminar_adjuntos')
+    for aid in eliminar_ids:
+        att = CommentAttachment.query.get(int(aid))
+        if att and att.comment_id == c.id:
+            eliminar_adjunto_fichero(att.file_path)
+            db.session.delete(att)
+
+    # Añadir nuevos adjuntos
+    ficheros = request.files.getlist('adjuntos')
+    for file in ficheros:
+        resultado = guardar_adjunto(file)
+        if resultado:
+            adjunto = CommentAttachment(
+                comment_id=c.id,
+                filename=resultado['filename'],
+                file_path=resultado['file_path'],
+                file_type=resultado['file_type'],
+            )
+            db.session.add(adjunto)
+
+    db.session.commit()
+    flash('Comentario actualizado correctamente.', 'success')
+    return redirect(url_for('tickets.detail', ticket_id=ticket_id))

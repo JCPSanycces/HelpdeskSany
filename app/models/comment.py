@@ -9,6 +9,7 @@ class Comment(db.Model):
     ticket_id  = db.Column(db.String(20), db.ForeignKey('tickets.ticket_id'), nullable=False)
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=True)
 
     author      = db.relationship('User', backref='comments')
     attachments = db.relationship('CommentAttachment', backref='comment',

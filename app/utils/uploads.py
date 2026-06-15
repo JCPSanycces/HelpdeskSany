@@ -39,3 +39,13 @@ def guardar_adjunto(file, subfolder='comments'):
         'file_type': get_file_type(file.filename),
         'filename':  original_name,
     }
+
+# Eliminar un adjunto implica eliminar su registro en la base de datos y el fichero físico.
+def eliminar_adjunto_fichero(file_path):
+    """Elimina el fichero físico dentro de static/<file_path>."""
+    full_path = os.path.join(current_app.root_path, 'static', file_path)
+    if os.path.exists(full_path):
+        try:
+            os.remove(full_path)
+        except OSError:
+            pass

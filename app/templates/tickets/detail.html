@@ -32,8 +32,42 @@
 				</div>
 
 				<div class='card-body'>
-					<h5>{{ ticket.title }}</h5>
-					<div class="ticket-description text-muted">{{ ticket.description | safe }}</div>
+
+					<!-- Vista normal del título/descripción -->
+					<div id="ticket-view-mode">
+						<div class="d-flex justify-content-between align-items-start">
+							<h5 class="mb-2">{{ ticket.title }}</h5>
+							{% if current_user.is_agent() or ticket.created_by == current_user.id %}
+							<button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleTicketEdit()">
+								<i class="bi bi-pencil"></i> Editar
+							</button>
+							{% endif %}
+						</div>
+						<div class="ticket-description text-muted">{{ ticket.description | safe }}</div>
+					</div>
+
+					<!-- Modo edición del título/descripción -->
+					<div id="ticket-edit-mode" style="display:none;">
+						<form method="POST"
+							  action="{{ url_for('tickets.edit_ticket_description', ticket_id=ticket.ticket_id) }}"
+							  id="form-edit-ticket">
+							<div class="mb-2">
+								<label class="form-label fw-semibold">Asunto</label>
+								<input type="text" name="title" class="form-control"
+									   value="{{ ticket.title }}" required>
+							</div>
+							<div class="mb-2">
+								<label class="form-label fw-semibold">Descripción</label>
+								<div id="editor-edit-ticket" style="height:200px; background:white;"></div>
+								<input type="hidden" name="description" id="input-edit-ticket-description">
+							</div>
+							<div class="d-flex gap-2 mt-2">
+								<button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+								<button type="button" class="btn btn-secondary btn-sm" onclick="toggleTicketEdit()">Cancelar</button>
+							</div>
+						</form>
+					</div>
+
 				</div>
 
 				<div class="card-footer bg-white text-muted" style="font-size:.85rem">
@@ -51,58 +85,113 @@
 			<div class='card mb-2'>
 				<div class='card-body py-2'>
 					<div class='d-flex justify-content-between mb-1'>
-					<strong style='font-size:.9rem'>{{ c.author.name }}</strong>
-					<small class='text-muted'>{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+						<strong style='font-size:.9rem'>{{ c.author.name }}</strong>
+						<div class="d-flex align-items-center gap-2">
+							<small class='text-muted'>
+								{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}
+								{% if c.updated_at %} (editado){% endif %}
+							</small>
+							{% if c.user_id == current_user.id or current_user.is_admin() %}
+							<button type="button" class="btn btn-sm btn-link p-0 text-secondary"
+									onclick="toggleCommentEdit({{ c.id }})" title="Editar">
+								<i class="bi bi-pencil"></i>
+							</button>
+							{% endif %}
+						</div>
 					</div>
-					<div class='comment-body' style='font-size:.9rem'>{{ c.body | safe }}</div>
 
-					{% set adjuntos = c.attachments.all() %}
-					{% if adjuntos %}
-					<div class="mt-2">
+					<!-- Vista normal del comentario -->
+					<div id="comment-view-{{ c.id }}">
+						<div class='comment-body' style='font-size:.9rem'>{{ c.body | safe }}</div>
 
-					<!-- Imágenes -->
-					{% set imagenes = adjuntos | selectattr('file_type', 'equalto', 'imagen') | list %}
-					{% if imagenes %}
-					<div class="d-flex flex-wrap gap-2 mb-2">
-						{% for img in imagenes %}
-						<a href="{{ url_for('static', filename=img.file_path) }}" target="_blank">
-						<img src="{{ url_for('static', filename=img.file_path) }}"
-							alt="{{ img.filename }}"
-							class="rounded border"
-							style="max-height:120px; max-width:180px; object-fit:cover; cursor:zoom-in;">
-						</a>
-						{% endfor %}
-					</div>
-					{% endif %}
+						{% set adjuntos = c.attachments.all() %}
+						{% if adjuntos %}
+						<div class="mt-2">
 
-					<!-- Documentos -->
-					{% set documentos = adjuntos | selectattr('file_type', 'equalto', 'documento') | list %}
-					{% if documentos %}
-					<div class="d-flex flex-wrap gap-2">
-						{% for doc in documentos %}
-						<a href="{{ url_for('static', filename=doc.file_path) }}"
-						download="{{ doc.filename }}"
-						class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
-						{% set ext = doc.filename.rsplit('.', 1)[-1].lower() %}
-						{% if ext == 'pdf' %}
-							<i class="bi bi-file-earmark-pdf text-danger"></i>
-						{% elif ext in ['docx', 'doc'] %}
-							<i class="bi bi-file-earmark-word text-primary"></i>
-						{% elif ext in ['xlsx', 'xls'] %}
-							<i class="bi bi-file-earmark-excel text-success"></i>
-						{% elif ext in ['pptx', 'ppt'] %}
-							<i class="bi bi-file-earmark-ppt text-warning"></i>
-						{% else %}
-							<i class="bi bi-file-earmark-text"></i>
+							<!-- Imágenes -->
+							{% set imagenes = adjuntos | selectattr('file_type', 'equalto', 'imagen') | list %}
+							{% if imagenes %}
+							<div class="d-flex flex-wrap gap-2 mb-2">
+								{% for img in imagenes %}
+								<a href="{{ url_for('static', filename=img.file_path) }}" target="_blank">
+								<img src="{{ url_for('static', filename=img.file_path) }}"
+									alt="{{ img.filename }}"
+									class="rounded border"
+									style="max-height:120px; max-width:180px; object-fit:cover; cursor:zoom-in;">
+								</a>
+								{% endfor %}
+							</div>
+							{% endif %}
+
+							<!-- Documentos -->
+							{% set documentos = adjuntos | selectattr('file_type', 'equalto', 'documento') | list %}
+							{% if documentos %}
+							<div class="d-flex flex-wrap gap-2">
+								{% for doc in documentos %}
+								<a href="{{ url_for('static', filename=doc.file_path) }}"
+								download="{{ doc.filename }}"
+								class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+								{% set ext = doc.filename.rsplit('.', 1)[-1].lower() %}
+								{% if ext == 'pdf' %}
+									<i class="bi bi-file-earmark-pdf text-danger"></i>
+								{% elif ext in ['docx', 'doc'] %}
+									<i class="bi bi-file-earmark-word text-primary"></i>
+								{% elif ext in ['xlsx', 'xls'] %}
+									<i class="bi bi-file-earmark-excel text-success"></i>
+								{% elif ext in ['pptx', 'ppt'] %}
+									<i class="bi bi-file-earmark-ppt text-warning"></i>
+								{% else %}
+									<i class="bi bi-file-earmark-text"></i>
+								{% endif %}
+								{{ doc.filename }}
+								</a>
+								{% endfor %}
+							</div>
+							{% endif %}
+
+						</div>
 						{% endif %}
-						{{ doc.filename }}
-						</a>
-						{% endfor %}
 					</div>
-					{% endif %}
 
+					<!-- Modo edición del comentario -->
+					<div id="comment-edit-{{ c.id }}" style="display:none;">
+						<form method="POST"
+							  action="{{ url_for('tickets.edit_comment', ticket_id=ticket.ticket_id, comment_id=c.id) }}"
+							  enctype="multipart/form-data" id="form-edit-comment-{{ c.id }}">
+
+							<div id="editor-edit-comment-{{ c.id }}" style="height:120px; background:white;"></div>
+							<input type="hidden" name="body" id="input-edit-comment-body-{{ c.id }}">
+
+							{% set adjuntos = c.attachments.all() %}
+							{% if adjuntos %}
+							<div class="mt-2">
+								<label class="form-label text-muted" style="font-size:.8rem">
+									Adjuntos actuales (marca para eliminar)
+								</label><br>
+								{% for a in adjuntos %}
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="checkbox"
+										   name="eliminar_adjuntos" value="{{ a.id }}" id="att-{{ a.id }}">
+									<label class="form-check-label" for="att-{{ a.id }}" style="font-size:.8rem">
+										{{ a.filename }}
+									</label>
+								</div>
+								{% endfor %}
+							</div>
+							{% endif %}
+
+							<div class="mb-2 mt-2">
+								<label class="form-label text-muted" style="font-size:.8rem">Añadir nuevos ficheros</label>
+								<input type="file" name="adjuntos" class="form-control form-control-sm"
+									   accept=".png,.jpg,.jpeg,.gif,.webp,.txt,.docx,.pptx,.xlsx,.pdf" multiple>
+							</div>
+
+							<div class="d-flex gap-2 mt-2">
+								<button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+								<button type="button" class="btn btn-secondary btn-sm" onclick="toggleCommentEdit({{ c.id }})">Cancelar</button>
+							</div>
+						</form>
 					</div>
-					{% endif %}
 
 				</div>
 			</div>
@@ -110,7 +199,7 @@
 			<p class='text-muted'>Aún no hay comentarios.</p>
 			{% endfor %}
 
-			<!-- Formulario de comentario -->
+			<!-- Formulario de nuevo comentario -->
 			<div class='card mt-3'>
 				<div class='card-body'>
 					<form method='POST'
@@ -206,7 +295,7 @@
 					{% if current_user.is_agent() %}
 					<select name="category" class="form-select" required>
 						<option value="">-- Sin categoría --</option>
-						<option value="Sage X3"          {% if ticket.category=='Sage X3' %}selected{% endif %}>Sage X3</option>
+						<option value="SAGE X3"          {% if ticket.category=='SAGE X3' %}selected{% endif %}>SAGE X3</option>
 						<option value="Software"         {% if ticket.category=='Software' %}selected{% endif %}>Software</option>
 						<option value="Hardware"         {% if ticket.category=='Hardware' %}selected{% endif %}>Hardware</option>
 						<option value="Redes e internet" {% if ticket.category=='Redes e internet' %}selected{% endif %}>Redes e internet</option>
@@ -305,27 +394,16 @@
 		</script>
 	</div>
 
-	<!-- Quill (editor de texto con imágenes) para comentarios -->
+	<!-- Quill (editor de texto con imágenes) -->
 	<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
 	<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
 	<script>
-		const quillComment = new Quill('#editor-comment', {
-			theme: 'snow',
-			placeholder: 'Escribe aquí...',
-			modules: {
-				toolbar: {
-					container: [
-						['bold', 'italic', 'underline', 'strike'],
-						[{ 'list': 'ordered' }, { 'list': 'bullet' }],
-						['link', 'image'],
-						['clean']
-					],
-					handlers: {
-						image: () => imageHandlerFor(quillComment)
-					}
-				}
-			}
-		});
+		const QUILL_TOOLBAR = [
+			['bold', 'italic', 'underline', 'strike'],
+			[{ 'list': 'ordered' }, { 'list': 'bullet' }],
+			['link', 'image'],
+			['clean']
+		];
 
 		function imageHandlerFor(editor) {
 			const input = document.createElement('input');
@@ -435,30 +513,48 @@
 			editor.setSelection(pos.index);
 		}
 
-		// Pegado de imágenes/contenido enriquecido en el editor de comentarios
-		quillComment.root.addEventListener('paste', function (e) {
-			const clipboardData = e.clipboardData || window.clipboardData;
-			const items = clipboardData.items;
+		function setupPasteHandler(editor) {
+			editor.root.addEventListener('paste', function (e) {
+				const clipboardData = e.clipboardData || window.clipboardData;
+				const items = clipboardData.items;
 
-			for (let item of items) {
-				if (item.type.indexOf('image') === 0) {
+				for (let item of items) {
+					if (item.type.indexOf('image') === 0) {
+						e.preventDefault();
+						e.stopPropagation();
+						const file = item.getAsFile();
+						uploadImageFor(editor, file);
+						return;
+					}
+				}
+
+				const html = clipboardData.getData('text/html');
+				if (html && html.includes('data:image')) {
 					e.preventDefault();
 					e.stopPropagation();
-					const file = item.getAsFile();
-					uploadImageFor(quillComment, file);
-					return;
+					procesarPegadoConImagenesFor(editor, html);
 				}
-			}
+			}, true);
+		}
 
-			const html = clipboardData.getData('text/html');
-			if (html && html.includes('data:image')) {
-				e.preventDefault();
-				e.stopPropagation();
-				procesarPegadoConImagenesFor(quillComment, html);
-			}
-		}, true);
+		function crearEditor(containerId) {
+			const editor = new Quill('#' + containerId, {
+				theme: 'snow',
+				placeholder: 'Escribe aquí...',
+				modules: {
+					toolbar: {
+						container: QUILL_TOOLBAR,
+						handlers: { image: () => imageHandlerFor(editor) }
+					}
+				}
+			});
+			setupPasteHandler(editor);
+			return editor;
+		}
 
-		// Sincronizar antes de enviar el formulario de comentario
+		// --- Editor de nuevo comentario ---
+		const quillComment = crearEditor('editor-comment');
+
 		document.getElementById('form-comentario').addEventListener('submit', function (e) {
 			const text = quillComment.getText().trim();
 			const hasImage = quillComment.root.querySelector('img') !== null;
@@ -469,6 +565,64 @@
 			}
 			document.getElementById('input-comment-body').value = quillComment.root.innerHTML;
 		});
+
+		// --- Contenido original para edición ---
+		const ticketDescriptionHtml = {{ ticket.description | tojson }};
+		const commentBodies = {
+			{% for c in ticket.comments.order_by('created_at') %}
+			{{ c.id }}: {{ c.body | tojson }},
+			{% endfor %}
+		};
+
+		// --- Edición del ticket (título/descripción) ---
+		let quillEditTicket = null;
+		function toggleTicketEdit() {
+			const view = document.getElementById('ticket-view-mode');
+			const edit = document.getElementById('ticket-edit-mode');
+			if (edit.style.display === 'none') {
+				view.style.display = 'none';
+				edit.style.display = 'block';
+				if (!quillEditTicket) {
+					quillEditTicket = crearEditor('editor-edit-ticket');
+					quillEditTicket.root.innerHTML = ticketDescriptionHtml;
+				}
+			} else {
+				edit.style.display = 'none';
+				view.style.display = 'block';
+			}
+		}
+
+		const formEditTicket = document.getElementById('form-edit-ticket');
+		if (formEditTicket) {
+			formEditTicket.addEventListener('submit', function (e) {
+				document.getElementById('input-edit-ticket-description').value = quillEditTicket.root.innerHTML;
+			});
+		}
+
+		// --- Edición de comentarios ---
+		const quillEditComments = {};
+		function toggleCommentEdit(commentId) {
+			const view = document.getElementById('comment-view-' + commentId);
+			const edit = document.getElementById('comment-edit-' + commentId);
+			if (edit.style.display === 'none') {
+				view.style.display = 'none';
+				edit.style.display = 'block';
+				if (!quillEditComments[commentId]) {
+					const editor = crearEditor('editor-edit-comment-' + commentId);
+					editor.root.innerHTML = commentBodies[commentId];
+					quillEditComments[commentId] = editor;
+
+					document.getElementById('form-edit-comment-' + commentId)
+						.addEventListener('submit', function (e) {
+							document.getElementById('input-edit-comment-body-' + commentId).value =
+								quillEditComments[commentId].root.innerHTML;
+						});
+				}
+			} else {
+				edit.style.display = 'none';
+				view.style.display = 'block';
+			}
+		}
 	</script>
 
 {% endblock %}
