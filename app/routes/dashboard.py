@@ -80,7 +80,7 @@ def index():
 
     # Distribución por categoría
     categorias = {}
-    for cat in ['SAGE X3', 'Software', 'Hardware', 'Redes e internet', 'EDI']:
+    for cat in ['Sage X3', 'Software', 'Hardware', 'Redes e internet', 'EDI']:
         categorias[cat] = base_query.filter_by(category=cat).count()
     sin_categoria = base_query.filter(
         db.or_(Ticket.category == None, Ticket.category == '')

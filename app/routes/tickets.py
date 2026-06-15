@@ -13,6 +13,8 @@ from app.utils.email import (
 )
 from app.utils.uploads import guardar_adjunto
 from app.models.comment_attachment import CommentAttachment
+from flask import jsonify
+from app.utils.sanitize import limpiar_html
 
 tickets_bp = Blueprint('tickets', __name__)
 
@@ -77,7 +79,7 @@ def new_ticket():
         t = Ticket(
             ticket_id=generar_ticket_id(),
             title=request.form['title'],
-            description=request.form['description'],
+            description=limpiar_html(request.form['description']),
             priority=request.form.get('priority', 'medium'),
             category=request.form.get('category', ''),
             created_by=current_user.id,
@@ -261,11 +263,10 @@ def add_comment(ticket_id):
     body   = request.form.get('body', '').strip()
 
     if body:
-        c = Comment(body=body, ticket_id=ticket_id, user_id=current_user.id)
+        c = Comment(body=limpiar_html(body), ticket_id=ticket_id, user_id=current_user.id)
         db.session.add(c)
-        db.session.flush()  # Para tener c.id antes del commit
+        db.session.flush()
 
-        # Guardar todos los ficheros adjuntos
         ficheros = request.files.getlist('adjuntos')
         for file in ficheros:
             resultado = guardar_adjunto(file)
@@ -369,3 +370,15 @@ def add_participant(ticket_id):
 
     flash(f'{nuevo.name} añadido como participante.', 'success')
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+
+# Subida de imagen para la descripción del ticket
+@tickets_bp.route('/upload_description_image', methods=['POST'])
+@login_required
+def upload_description_image():
+    file = request.files.get('image')
+    resultado = guardar_adjunto(file, subfolder='descriptions')
+    if resultado:
+        url = url_for('static', filename=resultado['file_path'])
+        return jsonify({'url': url})
+    return jsonify({'error': 'No se pudo subir la imagen'}), 400

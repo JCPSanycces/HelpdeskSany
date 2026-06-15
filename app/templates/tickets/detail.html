@@ -2,6 +2,12 @@
 {% block title %}Ticket #{{ ticket.ticket_id }}{% endblock %}
 
 {% block content %}
+	<style>
+		.ticket-description img, .comment-body img {
+			max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0;
+		}
+		.ticket-description p, .comment-body p { margin-bottom: .5rem; }
+	</style>
 	<div class='row g-4'>
 		<!-- Columna principal -->
 		<div class='col-lg-8'>
@@ -27,7 +33,7 @@
 
 				<div class='card-body'>
 					<h5>{{ ticket.title }}</h5>
-					<p class='text-muted mb-0'>{{ ticket.description }}</p>
+					<div class="ticket-description text-muted">{{ ticket.description | safe }}</div>
 				</div>
 
 				<div class="card-footer bg-white text-muted" style="font-size:.85rem">
@@ -48,7 +54,7 @@
 					<strong style='font-size:.9rem'>{{ c.author.name }}</strong>
 					<small class='text-muted'>{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
 					</div>
-					<p class='mb-0' style='font-size:.9rem; white-space: pre-wrap;'>{{ c.body }}</p>
+					<div class='comment-body' style='font-size:.9rem'>{{ c.body | safe }}</div>
 
 					{% set adjuntos = c.attachments.all() %}
 					{% if adjuntos %}
@@ -106,29 +112,30 @@
 
 			<!-- Formulario de comentario -->
 			<div class='card mt-3'>
-			<div class='card-body'>
-				<form method='POST'
-					action='{{ url_for("tickets.add_comment", ticket_id=ticket.ticket_id) }}'
-					enctype="multipart/form-data">
-				<label class='form-label fw-semibold'>Añadir comentario</label>
-				<textarea name='body' class='form-control mb-2' rows='3'
-							placeholder='Escribe aquí...' required></textarea>
+				<div class='card-body'>
+					<form method='POST'
+						action='{{ url_for("tickets.add_comment", ticket_id=ticket.ticket_id) }}'
+						enctype="multipart/form-data" id="form-comentario">
+					<label class='form-label fw-semibold'>Añadir comentario</label>
+					<div id="editor-comment" style="height: 150px; background: white;"></div>
+					<input type="hidden" name="body" id="input-comment-body">
+					<div class="form-text mb-2">Puedes pegar imágenes directamente (Ctrl+V) o usar el botón de imagen de la barra de herramientas.</div>
 
-				<div class="mb-2">
-					<label class="form-label text-muted" style="font-size:.85rem">
-					<i class="bi bi-paperclip"></i> Adjuntar ficheros (opcional)
-					</label>
-					<input type="file" name="adjuntos" class="form-control form-control-sm"
-						accept=".png,.jpg,.jpeg,.gif,.webp,.txt,.docx,.pptx,.xlsx,.pdf"
-						multiple>
-					<div class="form-text">
-					Imágenes (PNG, JPG, GIF, WEBP) o documentos (TXT, DOCX, PPTX, XLSX, PDF) · Máx. 5 MB por fichero
+					<div class="mb-2 mt-2">
+						<label class="form-label text-muted" style="font-size:.85rem">
+						<i class="bi bi-paperclip"></i> Adjuntar ficheros (opcional)
+						</label>
+						<input type="file" name="adjuntos" class="form-control form-control-sm"
+							accept=".png,.jpg,.jpeg,.gif,.webp,.txt,.docx,.pptx,.xlsx,.pdf"
+							multiple>
+						<div class="form-text">
+							Imágenes (PNG, JPG, GIF, WEBP) o documentos (TXT, DOCX, PPTX, XLSX, PDF) · Máx. 5 MB por fichero
+						</div>
 					</div>
-				</div>
 
-				<button type='submit' class='btn btn-primary btn-sm'>Enviar</button>
-				</form>
-			</div>
+					<button type='submit' class='btn btn-primary btn-sm'>Enviar</button>
+					</form>
+				</div>
 			</div>
 
 		</div>
@@ -199,7 +206,7 @@
 					{% if current_user.is_agent() %}
 					<select name="category" class="form-select" required>
 						<option value="">-- Sin categoría --</option>
-						<option value="SAGE X3"          {% if ticket.category=='SAGE X3' %}selected{% endif %}>SAGE X3</option>
+						<option value="Sage X3"          {% if ticket.category=='Sage X3' %}selected{% endif %}>Sage X3</option>
 						<option value="Software"         {% if ticket.category=='Software' %}selected{% endif %}>Software</option>
 						<option value="Hardware"         {% if ticket.category=='Hardware' %}selected{% endif %}>Hardware</option>
 						<option value="Redes e internet" {% if ticket.category=='Redes e internet' %}selected{% endif %}>Redes e internet</option>
@@ -297,5 +304,171 @@
 		}
 		</script>
 	</div>
+
+	<!-- Quill (editor de texto con imágenes) para comentarios -->
+	<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+	<script>
+		const quillComment = new Quill('#editor-comment', {
+			theme: 'snow',
+			placeholder: 'Escribe aquí...',
+			modules: {
+				toolbar: {
+					container: [
+						['bold', 'italic', 'underline', 'strike'],
+						[{ 'list': 'ordered' }, { 'list': 'bullet' }],
+						['link', 'image'],
+						['clean']
+					],
+					handlers: {
+						image: () => imageHandlerFor(quillComment)
+					}
+				}
+			}
+		});
+
+		function imageHandlerFor(editor) {
+			const input = document.createElement('input');
+			input.setAttribute('type', 'file');
+			input.setAttribute('accept', 'image/*');
+			input.click();
+			input.onchange = () => {
+				const file = input.files[0];
+				if (file) uploadImageFor(editor, file);
+			};
+		}
+
+		function uploadImageFor(editor, file) {
+			const formData = new FormData();
+			formData.append('image', file);
+			fetch("{{ url_for('tickets.upload_description_image') }}", {
+				method: 'POST',
+				body: formData
+			})
+			.then(res => res.json())
+			.then(data => {
+				if (data.url) {
+					const range = editor.getSelection(true);
+					editor.insertEmbed(range.index, 'image', data.url);
+					editor.setSelection(range.index + 1);
+				} else {
+					alert('No se pudo subir la imagen.');
+				}
+			});
+		}
+
+		function dataURLtoFile(dataurl, filename) {
+			const arr = dataurl.split(',');
+			const mime = arr[0].match(/:(.*?);/)[1];
+			const bstr = atob(arr[1]);
+			let n = bstr.length;
+			const u8arr = new Uint8Array(n);
+			while (n--) u8arr[n] = bstr.charCodeAt(n);
+			return new File([u8arr], filename, { type: mime });
+		}
+
+		function subirImagenAsync(file) {
+			const formData = new FormData();
+			formData.append('image', file);
+			return fetch("{{ url_for('tickets.upload_description_image') }}", {
+				method: 'POST',
+				body: formData
+			})
+			.then(res => res.json())
+			.then(data => data.url || null);
+		}
+
+		const BLOCK_TAGS = ['P','DIV','LI','H1','H2','H3','H4','TR','BLOCKQUOTE'];
+
+		async function insertarNodoFor(editor, node, pos) {
+			if (node.nodeType === Node.TEXT_NODE) {
+				const texto = node.textContent;
+				if (texto && texto.trim() !== '') {
+					editor.insertText(pos.index, texto);
+					pos.index += texto.length;
+				}
+				return;
+			}
+
+			if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+			if (node.tagName === 'IMG') {
+				const src = node.getAttribute('src');
+				if (src && src.startsWith('data:image')) {
+					const file = dataURLtoFile(src, `pegado_${Date.now()}.png`);
+					const url = await subirImagenAsync(file);
+					if (url) {
+						editor.insertEmbed(pos.index, 'image', url);
+						pos.index += 1;
+					}
+				}
+				return;
+			}
+
+			if (node.tagName === 'BR') {
+				editor.insertText(pos.index, '\n');
+				pos.index += 1;
+				return;
+			}
+
+			for (const child of Array.from(node.childNodes)) {
+				await insertarNodoFor(editor, child, pos);
+			}
+
+			if (BLOCK_TAGS.includes(node.tagName)) {
+				editor.insertText(pos.index, '\n');
+				pos.index += 1;
+			}
+		}
+
+		async function procesarPegadoConImagenesFor(editor, html) {
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(html, 'text/html');
+
+			const range = editor.getSelection(true) || { index: editor.getLength() };
+			const pos = { index: range.index };
+
+			for (const child of Array.from(doc.body.childNodes)) {
+				await insertarNodoFor(editor, child, pos);
+			}
+
+			editor.setSelection(pos.index);
+		}
+
+		// Pegado de imágenes/contenido enriquecido en el editor de comentarios
+		quillComment.root.addEventListener('paste', function (e) {
+			const clipboardData = e.clipboardData || window.clipboardData;
+			const items = clipboardData.items;
+
+			for (let item of items) {
+				if (item.type.indexOf('image') === 0) {
+					e.preventDefault();
+					e.stopPropagation();
+					const file = item.getAsFile();
+					uploadImageFor(quillComment, file);
+					return;
+				}
+			}
+
+			const html = clipboardData.getData('text/html');
+			if (html && html.includes('data:image')) {
+				e.preventDefault();
+				e.stopPropagation();
+				procesarPegadoConImagenesFor(quillComment, html);
+			}
+		}, true);
+
+		// Sincronizar antes de enviar el formulario de comentario
+		document.getElementById('form-comentario').addEventListener('submit', function (e) {
+			const text = quillComment.getText().trim();
+			const hasImage = quillComment.root.querySelector('img') !== null;
+			if (!text && !hasImage) {
+				e.preventDefault();
+				alert('El comentario no puede estar vacío.');
+				return;
+			}
+			document.getElementById('input-comment-body').value = quillComment.root.innerHTML;
+		});
+	</script>
 
 {% endblock %}

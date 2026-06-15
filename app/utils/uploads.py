@@ -18,8 +18,8 @@ def allowed_file(filename):
 def get_file_type(filename):
     return 'imagen' if get_extension(filename) in ALLOWED_IMAGES else 'documento'
 
-def guardar_adjunto(file):
-    """Guarda un fichero y devuelve (file_path, file_type, filename_original) o None."""
+def guardar_adjunto(file, subfolder='comments'):
+    """Guarda un fichero en static/uploads/<subfolder>/ y devuelve sus datos o None."""
     if not file or file.filename == '':
         return None
 
@@ -29,14 +29,13 @@ def guardar_adjunto(file):
 
     original_name = secure_filename(file.filename)
     stored_name   = f"{uuid.uuid4().hex}.{ext}"
-    upload_folder = os.path.join(
-        current_app.config['UPLOAD_FOLDER']
-    )
+
+    upload_folder = os.path.join(current_app.config['UPLOAD_BASE'], subfolder)
     os.makedirs(upload_folder, exist_ok=True)
     file.save(os.path.join(upload_folder, stored_name))
 
     return {
-        'file_path': f"uploads/comments/{stored_name}",
+        'file_path': f"uploads/{subfolder}/{stored_name}",
         'file_type': get_file_type(file.filename),
         'filename':  original_name,
     }

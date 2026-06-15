@@ -24,9 +24,11 @@ class Config:
     # Subida de ficheros
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                  'app', 'static', 'uploads', 'comments')
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5 MB máximo por fichero
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10 MB máximo por petición
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     
+    # Ruta base para las subidas de archivos
+    UPLOAD_BASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app', 'static', 'uploads')
 
 class DevelopmentConfig(Config):
     DEBUG = True # Muestra errores detallados
