@@ -14,13 +14,6 @@
 							<input type='text' name='title' class='form-control' required placeholder='Describe brevemente el problema'>
 						</div>
 
-						<div class='mb-3'>
-							<label class='form-label fw-semibold'>Descripcion detallada *</label>
-							<div id="editor-description" style="height: 200px; background: white;"></div>
-							<input type="hidden" name="description" id="input-description">
-							<div class="form-text">Puedes pegar imágenes directamente (Ctrl+V) o usar el botón de imagen de la barra de herramientas.</div>
-						</div>
-
 						<div class='row g-3'>
 							<div class='col-md-4'>
 								<label class='form-label fw-semibold'>Prioridad</label>
@@ -55,6 +48,13 @@
 								</select>
 							</div>
 							{% endif %}
+						</div>
+
+						<div class='mb-3'>
+							<label class='form-label fw-semibold'>Descripcion detallada *</label>
+							<div id="editor-description" style="height: 200px; background: white;"></div>
+							<input type="hidden" name="description" id="input-description">
+							<div class="form-text">Puedes pegar imágenes directamente (Ctrl+V) o usar el botón de imagen de la barra de herramientas.</div>
 						</div>
 
 						<div class="mb-3 mt-3">
