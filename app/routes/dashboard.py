@@ -24,11 +24,15 @@ def index():
             )
         )
 
-    total_open     = base_query.filter_by(status='open').count()
-    total_progress = base_query.filter_by(status='in_progress').count()
-    total_pending  = base_query.filter_by(status='pending').count()
-    total_resolved = base_query.filter_by(status='resolved').count()
-    total_closed   = base_query.filter_by(status='closed').count()
+    # Use global data for dashboard totals and charts so everyone sees complete stats
+    global_query = Ticket.query
+    total_open     = global_query.filter_by(status='open').count()
+    total_progress = global_query.filter_by(status='in_progress').count()
+    total_pending  = global_query.filter_by(status='pending').count()
+    total_resolved = global_query.filter_by(status='resolved').count()
+    total_closed   = global_query.filter_by(status='closed').count()
+
+    # recent_tickets remains scoped to the user (unless admin)
     recent_tickets = base_query.order_by(Ticket.created_at.desc()).limit(10).all()
 
     # ── Datos para gráficos ──────────────────────────────
@@ -57,7 +61,7 @@ def index():
 
         meses_labels.append(primer_dia.strftime('%b %Y'))
 
-        q = base_query.filter(
+        q = global_query.filter(
             Ticket.created_at >= primer_dia,
             Ticket.created_at < ultimo_dia
         )
@@ -68,7 +72,7 @@ def index():
     # Distribución por prioridad
     prioridades = {}
     for pri in ['low', 'medium', 'high', 'critical']:
-        prioridades[pri] = base_query.filter_by(priority=pri).count()
+        prioridades[pri] = global_query.filter_by(priority=pri).count()
 
     # Tickets por estado (totales para donut)
     estados = {
@@ -82,8 +86,8 @@ def index():
     # Distribución por categoría
     categorias = {}
     for cat in ['Sage X3', 'Software', 'Hardware', 'Redes e internet', 'EDI']:
-        categorias[cat] = base_query.filter_by(category=cat).count()
-    sin_categoria = base_query.filter(
+        categorias[cat] = global_query.filter_by(category=cat).count()
+    sin_categoria = global_query.filter(
         db.or_(Ticket.category == None, Ticket.category == '')
     ).count()
     if sin_categoria:
