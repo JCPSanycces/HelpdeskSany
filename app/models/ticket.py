@@ -26,6 +26,13 @@ class Ticket(db.Model):
     # comunicación por email
     email_thread_id = db.Column(db.String(200), default=lambda: f"<ticket-{uuid.uuid4()}@sanycces.es>")
 
+    # Para integración con Microsoft Graph API (recepción de correos)
+    graph_conversation_id = db.Column(db.String(300), nullable=True, index=True)
+
+    # Relación con TicketAttachment (archivos adjuntos al ticket que se crean desde el correo)
+    attachments = db.relationship('TicketAttachment', backref='ticket',
+                              lazy='dynamic', cascade='all, delete-orphan')
+
     STATUS_LABELS = {
     'open': 'Abierto',
     'in_progress': 'En progreso',

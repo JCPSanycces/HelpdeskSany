@@ -2,6 +2,7 @@ import os
 import uuid
 from flask import current_app
 from werkzeug.utils import secure_filename
+import base64
 
 ALLOWED_IMAGES = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 ALLOWED_DOCS   = {'txt', 'docx', 'pptx', 'xlsx', 'pdf'}
@@ -49,3 +50,28 @@ def eliminar_adjunto_fichero(file_path):
             os.remove(full_path)
         except OSError:
             pass
+
+# Guardar un adjunto a partir de contenido en base64 (usado para adjuntos de Graph API)
+def guardar_adjunto_bytes(contenido_base64, filename_original, subfolder='tickets'):
+    """Guarda un fichero a partir de contenido en base64 (usado para adjuntos de Graph API)."""
+    ext = get_extension(filename_original)
+    if ext not in ALLOWED_ALL:
+        return None
+
+    try:
+        contenido = base64.b64decode(contenido_base64)
+    except Exception:
+        return None
+
+    stored_name = f"{uuid.uuid4().hex}.{ext}"
+    upload_folder = os.path.join(current_app.config['UPLOAD_BASE'], subfolder)
+    os.makedirs(upload_folder, exist_ok=True)
+
+    with open(os.path.join(upload_folder, stored_name), 'wb') as f:
+        f.write(contenido)
+
+    return {
+        'file_path': f"uploads/{subfolder}/{stored_name}",
+        'file_type': get_file_type(filename_original),
+        'filename':  secure_filename(filename_original),
+    }

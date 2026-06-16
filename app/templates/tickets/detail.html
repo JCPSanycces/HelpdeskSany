@@ -47,6 +47,27 @@
 						<div class="ticket-description text-muted">{{ ticket.description | safe }}</div>
 					</div>
 
+					<!-- # Adjuntos del ticket -->
+					{% set ticket_adjuntos = ticket.attachments.all() %}
+					{% if ticket_adjuntos %}
+					<div class="mt-2">
+						{% set ticket_imagenes = ticket_adjuntos | selectattr('file_type', 'equalto', 'imagen') | list %}
+						{% set ticket_documentos = ticket_adjuntos | selectattr('file_type', 'equalto', 'documento') | list %}
+
+						{% if ticket_documentos %}
+						<div class="d-flex flex-wrap gap-2 mt-2">
+							{% for doc in ticket_documentos %}
+							<a href="{{ url_for('static', filename=doc.file_path) }}"
+								download="{{ doc.filename }}"
+								class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+								<i class="bi bi-paperclip"></i> {{ doc.filename }}
+							</a>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					{% endif %}
+
 					<!-- Modo edición del título/descripción -->
 					<div id="ticket-edit-mode" style="display:none;">
 						<form method="POST"

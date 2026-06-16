@@ -3,12 +3,14 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_mail import Mail
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # Creamos los objetos globales (sin app todavia)
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 mail = Mail()
+scheduler = BackgroundScheduler()
 
 def create_app():
     app = Flask(__name__)
@@ -33,4 +35,21 @@ def create_app():
     app.register_blueprint(tickets_bp, url_prefix='/tickets')
     app.register_blueprint(users_bp, url_prefix='/users')
     app.register_blueprint(dashboard_bp)
+
+    # Tarea programada: revisar el buzón cada 3 minutos
+    if not scheduler.running:
+        from app.utils.email_to_ticket import procesar_correos_nuevos
+
+        def job_revisar_correo():
+            with app.app_context():
+                try:
+                    n = procesar_correos_nuevos()
+                    if n:
+                        app.logger.info(f'{n} ticket(s) creados desde correo.')
+                except Exception as e:
+                    app.logger.error(f'Error procesando correos: {e}')
+
+        scheduler.add_job(job_revisar_correo, 'interval', minutes=1, id='revisar_correo')
+        scheduler.start()
+
     return app
