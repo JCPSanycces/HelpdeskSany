@@ -11,7 +11,7 @@
 
 <!-- Tarjetas de estadísticas -->
 <div class="row g-3 mb-4">
-  <div class="col-md-3">
+  <div class="col-6 col-md">
     <a href="{{ url_for('tickets.list_tickets', status='open') }}" class="text-decoration-none">
       <div class="card text-center border-0 bg-primary bg-opacity-10 h-100"
            style="cursor:pointer;transition:.2s"
@@ -23,7 +23,7 @@
       </div>
     </a>
   </div>
-  <div class="col-md-3">
+  <div class="col-6 col-md">
     <a href="{{ url_for('tickets.list_tickets', status='in_progress') }}" class="text-decoration-none">
       <div class="card text-center border-0 bg-warning bg-opacity-10 h-100"
            style="cursor:pointer;transition:.2s"
@@ -35,7 +35,19 @@
       </div>
     </a>
   </div>
-  <div class="col-md-3">
+  <div class="col-6 col-md">
+    <a href="{{ url_for('tickets.list_tickets', status='pending') }}" class="text-decoration-none">
+      <div class="card text-center border-0 badge-pending h-100"
+           style="cursor:pointer;transition:.2s;color:inherit;"
+           onmouseover="this.style.opacity='.95'" onmouseout="this.style.opacity='1'">
+        <div class="card-body">
+          <div class="fs-2 fw-bold text-pending-strong">{{ total_pending }}</div>
+          <div class="text-muted">Pendientes</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md">
     <a href="{{ url_for('tickets.list_tickets', status='resolved') }}" class="text-decoration-none">
       <div class="card text-center border-0 bg-success bg-opacity-10 h-100"
            style="cursor:pointer;transition:.2s"
@@ -47,7 +59,7 @@
       </div>
     </a>
   </div>
-  <div class="col-md-3">
+  <div class="col-6 col-md">
     <a href="{{ url_for('tickets.list_tickets', status='closed') }}" class="text-decoration-none">
       <div class="card text-center border-0 bg-secondary bg-opacity-10 h-100"
            style="cursor:pointer;transition:.2s"
@@ -59,6 +71,7 @@
       </div>
     </a>
   </div>
+
 </div>
 
 <!-- Gráficos -->

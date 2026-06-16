@@ -26,6 +26,7 @@ def index():
 
     total_open     = base_query.filter_by(status='open').count()
     total_progress = base_query.filter_by(status='in_progress').count()
+    total_pending  = base_query.filter_by(status='pending').count()
     total_resolved = base_query.filter_by(status='resolved').count()
     total_closed   = base_query.filter_by(status='closed').count()
     recent_tickets = base_query.order_by(Ticket.created_at.desc()).limit(10).all()
@@ -92,6 +93,7 @@ def index():
 
     return render_template('dashboard.html',
         total_open=total_open,
+        total_pending=total_pending,
         total_progress=total_progress,
         total_resolved=total_resolved,
         total_closed=total_closed,
