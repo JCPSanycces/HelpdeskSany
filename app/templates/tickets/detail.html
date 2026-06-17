@@ -17,7 +17,7 @@
 					<span class="fw-semibold">Ticket {{ ticket.ticket_id }}</span>
 					<div class="d-flex align-items-center gap-2">
 						<span class="badge badge-{{ ticket.status }}">{{ ticket.status_label() }}</span>
-						<a href="{{ url_for('tickets.list_tickets') }}" class="btn btn-sm btn-outline-secondary">
+						<a href="{{ url_for('tickets.list_tickets', status='open') }}" class="btn btn-sm btn-outline-secondary">
 							<i class="bi bi-arrow-left"></i> Volver
 						</a>
 						{% if current_user.is_admin() %}
