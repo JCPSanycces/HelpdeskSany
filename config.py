@@ -36,6 +36,15 @@ class Config:
     # Ruta base para las subidas de archivos
     UPLOAD_BASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app', 'static', 'uploads')
 
+    # Asuntos de correo que deben ignorarse (separados por coma, ; o |). Ejemplo:
+    # IGNORED_EMAIL_SUBJECTS='No ticket,Auto-reply'
+    IGNORED_EMAIL_SUBJECTS = os.environ.get('IGNORED_EMAIL_SUBJECTS', '')
+
+    # Direcciones de remitente que deben ignorarse (separadas por coma, ; o |).
+    # Permite dominios o partes del email. Ejemplo:
+    # IGNORED_EMAIL_SENDERS='no-reply@,@example.com,lista@dominio.com'
+    IGNORED_EMAIL_SENDERS = os.environ.get('IGNORED_EMAIL_SENDERS', '')
+
 class DevelopmentConfig(Config):
     DEBUG = True # Muestra errores detallados
 

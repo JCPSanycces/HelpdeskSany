@@ -2,6 +2,7 @@ import requests
 import msal
 import re
 from flask import current_app, url_for
+import re
 from app import db
 from app.models.ticket import Ticket
 from app.models.ticket_attachment import TicketAttachment
@@ -131,6 +132,21 @@ def procesar_correos_nuevos():
     for msg in mensajes:
         msg_id = msg['id']
         asunto = msg.get('subject') or '(Sin asunto)'
+
+        # --- Ignorar por asunto (configurable) ---
+        ignored_cfg = current_app.config.get('IGNORED_EMAIL_SUBJECTS', '')
+        skip_msg = False
+        if ignored_cfg:
+            parts = [p.strip().lower() for p in re.split(r'[;,|\n]+', ignored_cfg) if p.strip()]
+            subj_lower = (asunto or '').lower()
+            for part in parts:
+                if part and part in subj_lower:
+                    _marcar_leido(headers, mailbox, msg_id)
+                    skip_msg = True
+                    break
+        if skip_msg:
+            continue
+
         cuerpo = msg.get('body', {}).get('content', '')
         conversation_id = msg.get('conversationId')
         tiene_adjuntos = msg.get('hasAttachments', False)
@@ -143,6 +159,20 @@ def procesar_correos_nuevos():
         if remitente_email == mailbox.strip().lower():
             _marcar_leido(headers, mailbox, msg_id)
             continue
+
+        # --- Ignorar por remitente (configurable) ---
+        ignored_senders_cfg = current_app.config.get('IGNORED_EMAIL_SENDERS', '')
+        if ignored_senders_cfg:
+            send_parts = [p.strip().lower() for p in re.split(r'[;,|\n]+', ignored_senders_cfg) if p.strip()]
+            sender_lower = remitente_email.lower()
+            skip_sender = False
+            for part in send_parts:
+                if part and part in sender_lower:
+                    _marcar_leido(headers, mailbox, msg_id)
+                    skip_sender = True
+                    break
+            if skip_sender:
+                continue
 
         try:
             remitente = _obtener_o_crear_usuario(remitente_email, remitente_nombre)
