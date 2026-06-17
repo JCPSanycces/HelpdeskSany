@@ -159,6 +159,33 @@ def detail(ticket_id):
         ~User.id.in_(ids_participantes)
     ).order_by(User.name).all()
 
+    # --- Navigation: calcular primero/anterior/siguiente/último según tickets visibles por el usuario ---
+    if current_user.is_admin():
+        nav_query = Ticket.query
+    else:
+        tickets_participante = db.session.query(TicketParticipant.ticket_id)\
+            .filter_by(user_id=current_user.id).subquery()
+        nav_query = Ticket.query.filter(
+            db.or_(
+                Ticket.created_by == current_user.id,
+                Ticket.ticket_id.in_(tickets_participante)
+            )
+        )
+
+    # Orden ascendente para que "Siguiente" vaya hacia tickets más nuevos
+    nav_tickets = nav_query.order_by(Ticket.created_at.asc()).with_entities(Ticket.ticket_id).all()
+    ticket_ids = [t.ticket_id for t in nav_tickets]
+
+    try:
+        idx = ticket_ids.index(ticket.ticket_id)
+    except ValueError:
+        idx = None
+
+    prev_id = ticket_ids[idx-1] if idx is not None and idx > 0 else None
+    next_id = ticket_ids[idx+1] if idx is not None and idx < len(ticket_ids)-1 else None
+    first_id = ticket_ids[0] if ticket_ids else None
+    last_id = ticket_ids[-1] if ticket_ids else None
+
     return render_template('tickets/detail.html',
         ticket=ticket,
         agents=agents,
@@ -166,6 +193,10 @@ def detail(ticket_id):
         ids_participantes=ids_participantes,
         todos_usuarios=todos_usuarios,
         usuarios_disponibles=usuarios_disponibles,
+        first_id=first_id,
+        prev_id=prev_id,
+        next_id=next_id,
+        last_id=last_id,
     )
 
 

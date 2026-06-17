@@ -17,6 +17,41 @@
 					<span class="fw-semibold">Ticket {{ ticket.ticket_id }}</span>
 					<div class="d-flex align-items-center gap-2">
 						<span class="badge badge-{{ ticket.status }}">{{ ticket.status_label() }}</span>
+						<!-- Navegación entre tickets: primero, anterior, siguiente, último -->
+						<div class="btn-group me-2" role="group" aria-label="Navegación tickets">
+							{% if first_id %}
+							<a href="{{ url_for('tickets.detail', ticket_id=first_id) }}" class="btn btn-sm btn-outline-secondary" title="Primero">
+								<i class="bi bi-skip-backward-fill"></i>
+							</a>
+							{% else %}
+							<button type="button" class="btn btn-sm btn-outline-secondary disabled" aria-disabled="true"><i class="bi bi-skip-backward-fill"></i></button>
+							{% endif %}
+
+							{% if prev_id %}
+							<a href="{{ url_for('tickets.detail', ticket_id=prev_id) }}" class="btn btn-sm btn-outline-secondary" title="Anterior">
+								<i class="bi bi-chevron-left"></i>
+							</a>
+							{% else %}
+							<button type="button" class="btn btn-sm btn-outline-secondary disabled" aria-disabled="true"><i class="bi bi-chevron-left"></i></button>
+							{% endif %}
+
+							{% if next_id %}
+							<a href="{{ url_for('tickets.detail', ticket_id=next_id) }}" class="btn btn-sm btn-outline-secondary" title="Siguiente">
+								<i class="bi bi-chevron-right"></i>
+							</a>
+							{% else %}
+							<button type="button" class="btn btn-sm btn-outline-secondary disabled" aria-disabled="true"><i class="bi bi-chevron-right"></i></button>
+							{% endif %}
+
+							{% if last_id %}
+							<a href="{{ url_for('tickets.detail', ticket_id=last_id) }}" class="btn btn-sm btn-outline-secondary" title="Último">
+								<i class="bi bi-skip-forward-fill"></i>
+							</a>
+							{% else %}
+							<button type="button" class="btn btn-sm btn-outline-secondary disabled" aria-disabled="true"><i class="bi bi-skip-forward-fill"></i></button>
+							{% endif %}
+						</div>
+
 						<a href="{{ url_for('tickets.list_tickets', status='open') }}" class="btn btn-sm btn-outline-secondary">
 							<i class="bi bi-arrow-left"></i> Volver
 						</a>
