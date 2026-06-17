@@ -4,9 +4,22 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h4 class="mb-0">Dashboard</h4>
-  <a href="{{ url_for('tickets.new_ticket') }}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-lg"></i> Nuevo ticket
-  </a>
+  <div class="d-flex align-items-center gap-2">
+    {% if current_user.is_admin() %}
+    <form method="post" action="{{ url_for('dashboard.toggle_email_notifications') }}" class="m-0">
+      <button type="submit" class="btn btn-sm btn-outline-secondary">
+        {% if disable_email_notifications %}
+          <i class="bi bi-bell-slash"></i> Las notificaciones están desactivadas
+        {% else %}
+          <i class="bi bi-bell"></i> Las notificaciones están activadas
+        {% endif %}
+      </button>
+    </form>
+    {% endif %}
+    <a href="{{ url_for('tickets.new_ticket') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Nuevo ticket
+    </a>
+  </div>
 </div>
 
 <!-- Tarjetas de estadísticas -->

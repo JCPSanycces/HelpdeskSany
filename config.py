@@ -45,6 +45,10 @@ class Config:
     # IGNORED_EMAIL_SENDERS='no-reply@,@example.com,lista@dominio.com'
     IGNORED_EMAIL_SENDERS = os.environ.get('IGNORED_EMAIL_SENDERS', '')
 
+    # Desactivar envío de notificaciones por correo (usar 'True' para desactivar)
+    # Útil para mantenimiento o pruebas en entorno en vivo.
+    DISABLE_EMAIL_NOTIFICATIONS = os.environ.get('DISABLE_EMAIL_NOTIFICATIONS', 'False') == 'True'
+
 class DevelopmentConfig(Config):
     DEBUG = True # Muestra errores detallados
 

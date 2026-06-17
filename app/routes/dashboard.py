@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, current_app, flash, redirect, url_for, request
 from flask_login import login_required, current_user
 from app import db
 from app.models.ticket import Ticket
@@ -109,4 +109,19 @@ def index():
         prioridades=json.dumps(prioridades),
         estados=json.dumps(estados),
         categorias=json.dumps(categorias),
+        disable_email_notifications=current_app.config.get('DISABLE_EMAIL_NOTIFICATIONS', False),
     )
+
+
+@dashboard_bp.route('/toggle-email-notifications', methods=['POST'])
+@login_required
+def toggle_email_notifications():
+    if not current_user.is_admin():
+        flash('No tienes permiso para realizar esta acción.', 'danger')
+        return redirect(url_for('dashboard.index'))
+
+    cur = current_app.config.get('DISABLE_EMAIL_NOTIFICATIONS', False)
+    current_app.config['DISABLE_EMAIL_NOTIFICATIONS'] = not cur
+    state = 'desactivadas' if current_app.config['DISABLE_EMAIL_NOTIFICATIONS'] else 'activadas'
+    flash(f'Notificaciones por correo {state}.', 'success')
+    return redirect(url_for('dashboard.index'))

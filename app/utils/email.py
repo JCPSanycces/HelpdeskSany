@@ -19,7 +19,12 @@ def _base_html(titulo, cuerpo_html):
 
 def _enviar(destinatarios, subject, html, thread_id=None):
     """Envía un email. Si se pasa thread_id, lo encadena al hilo."""
+    # Allow disabling email notifications via config for maintenance/testing
     try:
+        if current_app.config.get('DISABLE_EMAIL_NOTIFICATIONS'):
+            current_app.logger.info(f"Email suppressed by DISABLE_EMAIL_NOTIFICATIONS: to={destinatarios} subject={subject}")
+            return
+
         msg = Message(subject=subject, recipients=destinatarios, html=html)
         # Cabeceras para encadenar en el mismo hilo de correo
         if thread_id:
