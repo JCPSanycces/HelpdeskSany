@@ -11,6 +11,7 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash= db.Column(db.String(256))
+    must_change_password = db.Column(db.Boolean, default=False)
     role = db.Column(db.String(20), default='user') # admin/agent/user
     department = db.Column(db.String(100), default='')
     active = db.Column(db.Boolean, default=True)

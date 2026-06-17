@@ -17,6 +17,9 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and user.active and user.check_password(password):
             login_user(user, remember=remember)
+            # Si debe cambiar la contraseña, redirigir al perfil para forzar cambio
+            if getattr(user, 'must_change_password', False):
+                return redirect(url_for('users.profile', force=1))
             next_page = request.args.get('next')
             return redirect(next_page or url_for('dashboard.index'))
         else:

@@ -19,6 +19,16 @@
                    value="{{ u.email }}" required>
           </div>
           <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem">Contraseña</label>
+            <div>
+              {% if u.password_hash %}
+                <span class="badge bg-success">Tiene contraseña</span>
+              {% else %}
+                <span class="badge bg-secondary">Sin contraseña</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="mb-3">
             <label class="form-label fw-semibold">Nueva contraseña</label>
             <input type="password" name="password" class="form-control"
                    placeholder="Dejar en blanco para no cambiarla">

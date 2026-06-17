@@ -121,6 +121,9 @@ def delete_user(user_id):
 @login_required
 def profile():
     u = current_user
+    # Si venimos forzados desde el login, avisar
+    if request.method == 'GET' and request.args.get('force'):
+        flash('Debes cambiar tu contraseña antes de continuar.', 'warning')
 
     if request.method == 'POST':
         nombre_nuevo = request.form.get('name', '').strip()
@@ -133,20 +136,32 @@ def profile():
 
         # Solo cambiar contraseña si se han rellenado los campos
         if password_nueva:
-            if not password_actual or not u.check_password(password_actual):
-                flash('La contraseña actual no es correcta.', 'danger')
-                return render_template('users/profile.html', u=u)
+            # Si el usuario viene marcado para forzar cambio, no comprobamos la contraseña actual
+            if u.must_change_password:
+                if password_nueva != password_repetir:
+                    flash('Las contraseñas nuevas no coinciden.', 'danger')
+                    return render_template('users/profile.html', u=u)
+                if len(password_nueva) < 6:
+                    flash('La nueva contraseña debe tener al menos 6 caracteres.', 'danger')
+                    return render_template('users/profile.html', u=u)
+                u.set_password(password_nueva)
+                u.must_change_password = False
+                flash('Contraseña actualizada correctamente.', 'success')
+            else:
+                if not password_actual or not u.check_password(password_actual):
+                    flash('La contraseña actual no es correcta.', 'danger')
+                    return render_template('users/profile.html', u=u)
 
-            if password_nueva != password_repetir:
-                flash('Las contraseñas nuevas no coinciden.', 'danger')
-                return render_template('users/profile.html', u=u)
+                if password_nueva != password_repetir:
+                    flash('Las contraseñas nuevas no coinciden.', 'danger')
+                    return render_template('users/profile.html', u=u)
 
-            if len(password_nueva) < 6:
-                flash('La nueva contraseña debe tener al menos 6 caracteres.', 'danger')
-                return render_template('users/profile.html', u=u)
+                if len(password_nueva) < 6:
+                    flash('La nueva contraseña debe tener al menos 6 caracteres.', 'danger')
+                    return render_template('users/profile.html', u=u)
 
-            u.set_password(password_nueva)
-            flash('Contraseña actualizada correctamente.', 'success')
+                u.set_password(password_nueva)
+                flash('Contraseña actualizada correctamente.', 'success')
 
         db.session.commit()
         flash('Perfil actualizado correctamente.', 'success')

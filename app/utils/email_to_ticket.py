@@ -46,8 +46,9 @@ def _obtener_o_crear_usuario(email, nombre):
     if usuario:
         return usuario
     usuario = User(name=nombre or email.split('@')[0], email=email, role='user', department='')
-    import secrets
-    usuario.set_password(secrets.token_urlsafe(24))
+    # Crear con contraseña por defecto '1234' y forzar cambio en primer inicio
+    usuario.set_password('1234')
+    usuario.must_change_password = True
     db.session.add(usuario)
     db.session.flush()
     return usuario

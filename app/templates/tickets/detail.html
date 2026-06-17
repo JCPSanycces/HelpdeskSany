@@ -527,9 +527,11 @@
 			.then(data => data.url || null);
 		}
 
-		const BLOCK_TAGS = ['P','DIV','LI','H1','H2','H3','H4','TR','BLOCKQUOTE'];
+		// Solo estas etiquetas generan salto de línea. Los DIV de Outlook/Word NO
+		// cuentan como bloque para evitar saltos de línea duplicados por anidación.
+		const BLOCK_TAGS = ['P', 'LI', 'H1', 'H2', 'H3', 'H4', 'TR', 'BLOCKQUOTE'];
 
-		async function insertarNodoFor(editor, node, pos) {
+		async function insertarNodo(editor, node, pos) {
 			if (node.nodeType === Node.TEXT_NODE) {
 				const texto = node.textContent;
 				if (texto && texto.trim() !== '') {
@@ -541,10 +543,13 @@
 
 			if (node.nodeType !== Node.ELEMENT_NODE) return;
 
+			// Elementos invisibles que Outlook suele incluir (firmas ocultas, estilos, etc.)
+			if (['STYLE', 'SCRIPT', 'HEAD', 'META', 'TITLE'].includes(node.tagName)) return;
+
 			if (node.tagName === 'IMG') {
 				const src = node.getAttribute('src');
 				if (src && src.startsWith('data:image')) {
-					const file = dataURLtoFile(src, `pegado_${Date.now()}.png`);
+					const file = dataURLtoFile(src, `pegado_${Date.now()}_${Math.random().toString(36).slice(2)}.png`);
 					const url = await subirImagenAsync(file);
 					if (url) {
 						editor.insertEmbed(pos.index, 'image', url);
@@ -560,17 +565,22 @@
 				return;
 			}
 
+			// Elemento contenedor: procesar sus hijos en orden
 			for (const child of Array.from(node.childNodes)) {
-				await insertarNodoFor(editor, child, pos);
+				await insertarNodo(editor, child, pos);
 			}
 
+			// Solo añadir salto de línea tras bloques "reales", nunca tras un DIV genérico
 			if (BLOCK_TAGS.includes(node.tagName)) {
-				editor.insertText(pos.index, '\n');
-				pos.index += 1;
+				const ultimoChar = editor.getText(Math.max(0, pos.index - 1), 1);
+				if (ultimoChar !== '\n') {
+					editor.insertText(pos.index, '\n');
+					pos.index += 1;
+				}
 			}
 		}
 
-		async function procesarPegadoConImagenesFor(editor, html) {
+		async function procesarPegadoConImagenes(editor, html) {
 			const parser = new DOMParser();
 			const doc = parser.parseFromString(html, 'text/html');
 
@@ -578,32 +588,51 @@
 			const pos = { index: range.index };
 
 			for (const child of Array.from(doc.body.childNodes)) {
-				await insertarNodoFor(editor, child, pos);
+				await insertarNodo(editor, child, pos);
 			}
 
 			editor.setSelection(pos.index);
 		}
 
-		function setupPasteHandler(editor) {
+		// Listener de pegado: SIEMPRE intercepta y procesa manualmente cuando hay
+		// HTML con imágenes embebidas en base64, sin cortar antes por un item suelto.
+		function registrarPegado(editor) {
 			editor.root.addEventListener('paste', function (e) {
 				const clipboardData = e.clipboardData || window.clipboardData;
-				const items = clipboardData.items;
+				const html = clipboardData.getData('text/html');
 
+				// Caso A: el portapapeles trae HTML con imágenes incrustadas (lo más común
+				// al copiar desde un correo de Outlook/Gmail con texto + imágenes)
+				if (html && html.includes('data:image')) {
+					e.preventDefault();
+					e.stopPropagation();
+					procesarPegadoConImagenes(editor, html);
+					return;
+				}
+
+				// Caso B: el portapapeles trae solo HTML sin imágenes (texto con formato);
+				// dejamos que Quill lo gestione de forma nativa para no perder el formato.
+				if (html) {
+					return;
+				}
+
+				// Caso C: el portapapeles trae únicamente una imagen suelta (captura de
+				// pantalla, fichero de imagen copiado), sin HTML de texto alrededor.
+				const items = clipboardData.items;
 				for (let item of items) {
 					if (item.type.indexOf('image') === 0) {
 						e.preventDefault();
 						e.stopPropagation();
 						const file = item.getAsFile();
-						uploadImageFor(editor, file);
+						subirImagenAsync(file).then(url => {
+							if (url) {
+								const range = editor.getSelection(true);
+								editor.insertEmbed(range.index, 'image', url);
+								editor.setSelection(range.index + 1);
+							}
+						});
 						return;
 					}
-				}
-
-				const html = clipboardData.getData('text/html');
-				if (html && html.includes('data:image')) {
-					e.preventDefault();
-					e.stopPropagation();
-					procesarPegadoConImagenesFor(editor, html);
 				}
 			}, true);
 		}
@@ -619,7 +648,7 @@
 					}
 				}
 			});
-			setupPasteHandler(editor);
+			registrarPegado(editor);
 			return editor;
 		}
 

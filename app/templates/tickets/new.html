@@ -141,31 +141,6 @@
     });
   }
 
-  // Permitir pegar imágenes directamente desde el portapapeles
-  quill.root.addEventListener('paste', function (e) {
-    const clipboardData = e.clipboardData || window.clipboardData;
-    const items = clipboardData.items;
-
-    // Caso 1: imagen pegada directamente (captura de pantalla, fichero copiado)
-    for (let item of items) {
-      if (item.type.indexOf('image') === 0) {
-        e.preventDefault();
-        e.stopPropagation();
-        const file = item.getAsFile();
-        uploadImage(file);
-        return;
-      }
-    }
-
-    // Caso 2: contenido HTML pegado (ej. desde Word) con imágenes en base64
-    const html = clipboardData.getData('text/html');
-    if (html && html.includes('data:image')) {
-      e.preventDefault();
-      e.stopPropagation();
-      procesarPegadoConImagenes(html);
-    }
-  }, true); // true = fase de captura, se ejecuta ANTES que el manejador de Quill
-
   function dataURLtoFile(dataurl, filename) {
     const arr = dataurl.split(',');
     const mime = arr[0].match(/:(.*?);/)[1];
@@ -176,7 +151,6 @@
     return new File([u8arr], filename, { type: mime });
   }
 
-  // Sube una imagen y devuelve la URL final (espera la respuesta del servidor)
   function subirImagenAsync(file) {
     const formData = new FormData();
     formData.append('image', file);
@@ -188,15 +162,13 @@
     .then(data => data.url || null);
   }
 
-  const BLOCK_TAGS = ['P','DIV','LI','H1','H2','H3','H4','TR','BLOCKQUOTE'];
+  const BLOCK_TAGS = ['P', 'LI', 'H1', 'H2', 'H3', 'H4', 'TR', 'BLOCKQUOTE'];
 
-  // Recorre los nodos del HTML pegado en orden, insertando texto e imágenes
-  // en sus posiciones correctas, una a una.
-  async function insertarNodo(node, pos) {
+  async function insertarNodo(editor, node, pos) {
     if (node.nodeType === Node.TEXT_NODE) {
       const texto = node.textContent;
       if (texto && texto.trim() !== '') {
-        quill.insertText(pos.index, texto);
+        editor.insertText(pos.index, texto);
         pos.index += texto.length;
       }
       return;
@@ -204,13 +176,15 @@
 
     if (node.nodeType !== Node.ELEMENT_NODE) return;
 
+    if (['STYLE', 'SCRIPT', 'HEAD', 'META', 'TITLE'].includes(node.tagName)) return;
+
     if (node.tagName === 'IMG') {
       const src = node.getAttribute('src');
       if (src && src.startsWith('data:image')) {
-        const file = dataURLtoFile(src, `pegado_${Date.now()}.png`);
+        const file = dataURLtoFile(src, `pegado_${Date.now()}_${Math.random().toString(36).slice(2)}.png`);
         const url = await subirImagenAsync(file);
         if (url) {
-          quill.insertEmbed(pos.index, 'image', url);
+          editor.insertEmbed(pos.index, 'image', url);
           pos.index += 1;
         }
       }
@@ -218,36 +192,74 @@
     }
 
     if (node.tagName === 'BR') {
-      quill.insertText(pos.index, '\n');
+      editor.insertText(pos.index, '\n');
       pos.index += 1;
       return;
     }
 
-    // Elemento contenedor: procesar sus hijos en orden
     for (const child of Array.from(node.childNodes)) {
-      await insertarNodo(child, pos);
+      await insertarNodo(editor, child, pos);
     }
 
-    // Tras un bloque (párrafo, div, li...) añadir salto de línea
     if (BLOCK_TAGS.includes(node.tagName)) {
-      quill.insertText(pos.index, '\n');
-      pos.index += 1;
+      const ultimoChar = editor.getText(Math.max(0, pos.index - 1), 1);
+      if (ultimoChar !== '\n') {
+        editor.insertText(pos.index, '\n');
+        pos.index += 1;
+      }
     }
   }
 
-  async function procesarPegadoConImagenes(html) {
+  async function procesarPegadoConImagenes(editor, html) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
-    const range = quill.getSelection(true) || { index: quill.getLength() };
+    const range = editor.getSelection(true) || { index: editor.getLength() };
     const pos = { index: range.index };
 
     for (const child of Array.from(doc.body.childNodes)) {
-      await insertarNodo(child, pos);
+      await insertarNodo(editor, child, pos);
     }
 
-    quill.setSelection(pos.index);
+    editor.setSelection(pos.index);
   }
+
+  function registrarPegado(editor) {
+    editor.root.addEventListener('paste', function (e) {
+      const clipboardData = e.clipboardData || window.clipboardData;
+      const html = clipboardData.getData('text/html');
+
+      if (html && html.includes('data:image')) {
+        e.preventDefault();
+        e.stopPropagation();
+        procesarPegadoConImagenes(editor, html);
+        return;
+      }
+
+      if (html) {
+        return;
+      }
+
+      const items = clipboardData.items;
+      for (let item of items) {
+        if (item.type.indexOf('image') === 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          const file = item.getAsFile();
+          subirImagenAsync(file).then(url => {
+            if (url) {
+              const range = editor.getSelection(true);
+              editor.insertEmbed(range.index, 'image', url);
+              editor.setSelection(range.index + 1);
+            }
+          });
+          return;
+        }
+      }
+    }, true);
+  }
+
+  registrarPegado(quill);
 
   // Sincronizar el contenido con el campo oculto antes de enviar el formulario
   document.getElementById('form-nuevo-ticket').addEventListener('submit', function (e) {
