@@ -5,7 +5,7 @@
 	<style>
 		.ticket-description, .comment-body { font-size: .85rem; }
 		.ticket-description img, .comment-body img {
-			max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; max-height:150px;
+			max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; max-height:150px; cursor:pointer;
 		}
 		.ticket-description p, .comment-body p { margin-bottom: .5rem; }
 	</style>
@@ -385,6 +385,20 @@
 		</div>
 		{% endif %}
 
+		<!-- Imagen modal -->
+		<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
+		  <div class="modal-dialog modal-dialog-centered modal-xl">
+			<div class="modal-content bg-transparent border-0">
+			  <div class="modal-header border-0">
+				<button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+			  </div>
+			  <div class="modal-body text-center p-0">
+				<img id="imagePreviewModalSrc" src="" alt="Imagen ampliada" class="img-fluid rounded">
+			  </div>
+			</div>
+		  </div>
+		</div>
+
 		<!-- Tom Select para el selector de participantes -->
 		<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 		<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
@@ -645,6 +659,18 @@
 				view.style.display = 'block';
 			}
 		}
+
+		// --- Imagen ampliada en modal ---
+		document.addEventListener('click', function (event) {
+			const img = event.target.closest('.ticket-description img, .comment-body img');
+			if (!img) return;
+			event.preventDefault();
+			const modalImg = document.getElementById('imagePreviewModalSrc');
+			if (!modalImg) return;
+			modalImg.src = img.src;
+			const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+			modal.show();
+		});
 	</script>
 
 {% endblock %}
