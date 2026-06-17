@@ -30,6 +30,7 @@ def create_app():
     from .routes.tickets import tickets_bp
     from .routes.users import users_bp
     from .routes.dashboard import dashboard_bp
+    from app.models.app_setting import AppSetting
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tickets_bp, url_prefix='/tickets')
@@ -51,5 +52,19 @@ def create_app():
 
         scheduler.add_job(job_revisar_correo, 'interval', minutes=1, id='revisar_correo')
         scheduler.start()
+
+    # Load persistent app settings (if the table exists)
+    try:
+        with app.app_context():
+            # If the table was created, read stored flags
+            if db.engine.has_table(AppSetting.__tablename__):
+                val = AppSetting.get_bool('disable_email_notifications', default=app.config.get('DISABLE_EMAIL_NOTIFICATIONS', False))
+                app.config['DISABLE_EMAIL_NOTIFICATIONS'] = val
+                app.logger.info(f'AppSetting loaded: disable_email_notifications={val}')
+            else:
+                app.logger.info('AppSetting table not found at startup.')
+    except Exception as e:
+        # Log and continue if migrations not applied yet or DB not available
+        app.logger.error(f'Error loading AppSetting at startup: {e}')
 
     return app

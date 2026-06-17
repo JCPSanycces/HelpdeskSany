@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, current_app, flash, redirect, url_for, request
 from flask_login import login_required, current_user
+from app.models.app_setting import AppSetting
 from app import db
 from app.models.ticket import Ticket
 from app.models.ticket_participant import TicketParticipant
@@ -95,6 +96,10 @@ def index():
 
 
 
+    # Read persistent flag directly so UI always reflects DB
+    disable_flag = AppSetting.get_bool('disable_email_notifications', default=current_app.config.get('DISABLE_EMAIL_NOTIFICATIONS', False))
+    current_app.logger.debug(f'dashboard: disable_email_notifications={disable_flag}')
+
     return render_template('dashboard.html',
         total_open=total_open,
         total_pending=total_pending,
@@ -109,7 +114,7 @@ def index():
         prioridades=json.dumps(prioridades),
         estados=json.dumps(estados),
         categorias=json.dumps(categorias),
-        disable_email_notifications=current_app.config.get('DISABLE_EMAIL_NOTIFICATIONS', False),
+        disable_email_notifications=disable_flag,
     )
 
 
@@ -119,9 +124,19 @@ def toggle_email_notifications():
     if not current_user.is_admin():
         flash('No tienes permiso para realizar esta acción.', 'danger')
         return redirect(url_for('dashboard.index'))
-
-    cur = current_app.config.get('DISABLE_EMAIL_NOTIFICATIONS', False)
-    current_app.config['DISABLE_EMAIL_NOTIFICATIONS'] = not cur
-    state = 'desactivadas' if current_app.config['DISABLE_EMAIL_NOTIFICATIONS'] else 'activadas'
-    flash(f'Notificaciones por correo {state}.', 'success')
+    # Read current persisted value from DB to avoid mismatch with app.config
+    cur = AppSetting.get_bool('disable_email_notifications', default=current_app.config.get('DISABLE_EMAIL_NOTIFICATIONS', False))
+    new_val = not cur
+    try:
+        # persist in DB
+        AppSetting.set('disable_email_notifications', 'True' if new_val else 'False')
+        db.session.commit()
+        current_app.config['DISABLE_EMAIL_NOTIFICATIONS'] = new_val
+        state = 'desactivadas' if new_val else 'activadas'
+        current_app.logger.info(f'Email notifications toggled: {cur} -> {new_val}')
+        flash(f'Notificaciones por correo {state}.', 'success')
+    except Exception as e:
+        current_app.logger.error(f'Error guardando setting: {e}')
+        db.session.rollback()
+        flash('No se pudo guardar la configuración.', 'danger')
     return redirect(url_for('dashboard.index'))
