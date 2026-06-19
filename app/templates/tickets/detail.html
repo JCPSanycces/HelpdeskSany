@@ -357,6 +357,7 @@
 						<option value="Hardware"         {% if ticket.category=='Hardware' %}selected{% endif %}>Hardware</option>
 						<option value="Redes e internet" {% if ticket.category=='Redes e internet' %}selected{% endif %}>Redes e internet</option>
 						<option value="EDI"              {% if ticket.category=='EDI' %}selected{% endif %}>EDI</option>
+						<option value="Analisis de datos/PowerBI" {% if ticket.category=='Analisis de datos/PowerBI' %}selected{% endif %}>Analisis de datos/PowerBI</option>
 					</select>
 					{% else %}
 					<p class="form-control-plaintext">{{ ticket.category or '-' }}</p>

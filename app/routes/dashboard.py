@@ -86,7 +86,7 @@ def index():
 
     # Distribución por categoría
     categorias = {}
-    for cat in ['Sage X3', 'Software', 'Hardware', 'Redes e internet', 'EDI']:
+    for cat in ['Sage X3', 'Software', 'Hardware', 'Redes e internet', 'EDI', 'Analisis de datos/PowerBI']:
         categorias[cat] = global_query.filter_by(category=cat).count()
     sin_categoria = global_query.filter(
         db.or_(Ticket.category == None, Ticket.category == '')
