@@ -43,6 +43,8 @@ def list_tickets():
     status   = request.args.get('status', '')
     priority = request.args.get('priority', '')
     category = request.args.get('category', '')
+    sort     = request.args.get('sort', 'created_at')
+    order    = request.args.get('order', 'desc')
 
     if current_user.is_admin():
         query = Ticket.query
@@ -63,9 +65,28 @@ def list_tickets():
     if category:
         query = query.filter_by(category=category)
 
-    tickets = query.order_by(Ticket.created_at.desc()).all()
+    # Columnas permitidas para ordenar (evita inyección SQL)
+    sort_map = {
+        'ticket_id': Ticket.ticket_id,
+        'title':     Ticket.title,
+        'category':  Ticket.category,
+        'status':    Ticket.status,
+        'priority':  Ticket.priority,
+        'created_at':Ticket.created_at,
+    }
+    sort_col = sort_map.get(sort, Ticket.created_at)
+    query = query.order_by(sort_col.asc() if order == 'asc' else sort_col.desc())
+
+    # Para ordenar por solicitante hay que hacer join con User
+    if sort == 'solicitante':
+        from app.models.user import User as UserModel
+        query = query.join(UserModel, Ticket.created_by == UserModel.id)\
+                     .order_by(UserModel.name.asc() if order == 'asc' else UserModel.name.desc())
+
+    tickets = query.all()
     return render_template('tickets/list.html', tickets=tickets,
-                           status=status, priority=priority, category=category)
+                           status=status, priority=priority, category=category,
+                           sort=sort, order=order)
 
 
 # Crear nuevo ticket con opción de asignar a un agente
