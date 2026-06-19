@@ -30,6 +30,8 @@ def index():
     total_open     = global_query.filter_by(status='open').count()
     total_progress = global_query.filter_by(status='in_progress').count()
     total_pending  = global_query.filter_by(status='pending').count()
+    total_validation = base_query.filter_by(status='validation').count()
+    total_blocked = base_query.filter_by(status='blocked').count()
     total_resolved = global_query.filter_by(status='resolved').count()
     total_closed   = global_query.filter_by(status='closed').count()
 
@@ -79,6 +81,9 @@ def index():
     estados = {
         'open':        total_open,
         'in_progress': total_progress,
+        'pending':     base_query.filter_by(status='pending').count(),
+        'validation':  total_validation,
+        'blocked':     total_blocked,
         'resolved':    total_resolved,
         'closed':      total_closed,
     }
@@ -96,7 +101,7 @@ def index():
 
 
 
-    # Read persistent flag directly so UI always reflects DB
+    # Leer setting persistente para desactivar notificaciones por correo
     disable_flag = AppSetting.get_bool('disable_email_notifications', default=current_app.config.get('DISABLE_EMAIL_NOTIFICATIONS', False))
     current_app.logger.debug(f'dashboard: disable_email_notifications={disable_flag}')
 
@@ -104,6 +109,8 @@ def index():
         total_open=total_open,
         total_pending=total_pending,
         total_progress=total_progress,
+        total_validation=total_validation,
+        total_blocked=total_blocked,
         total_resolved=total_resolved,
         total_closed=total_closed,
         recent_tickets=recent_tickets,

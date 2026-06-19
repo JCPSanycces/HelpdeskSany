@@ -68,6 +68,34 @@
   </div>
   <div class="col-6 col-md">
     {% if current_user.is_agent() or current_user.is_admin() %}
+    <a href="{{ url_for('tickets.list_tickets', status='validation') }}" class="text-decoration-none">
+    {% endif %}
+      <div class="card text-center border-0 h-100"
+          style="background:#EDE7F6; cursor:pointer; transition:.2s"
+          onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <div class="card-body">
+          <div class="fs-2 fw-bold" style="color:#4527A0">{{ total_validation }}</div>
+          <div class="text-muted">Validación</div>
+        </div>
+      </div>
+    {% if current_user.is_agent() or current_user.is_admin() %}</a>{% endif %}
+  </div>
+  <div class="col-6 col-md">
+    {% if current_user.is_agent() or current_user.is_admin() %}
+    <a href="{{ url_for('tickets.list_tickets', status='blocked') }}" class="text-decoration-none">
+    {% endif %}
+      <div class="card text-center border-0 h-100"
+          style="background:#FCE4EC; cursor:pointer; transition:.2s"
+          onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <div class="card-body">
+          <div class="fs-2 fw-bold" style="color:#880E4F">{{ total_blocked }}</div>
+          <div class="text-muted">Bloqueados</div>
+        </div>
+      </div>
+    {% if current_user.is_agent() or current_user.is_admin() %}</a>{% endif %}
+  </div>
+  <div class="col-6 col-md">
+    {% if current_user.is_agent() or current_user.is_admin() %}
     <a href="{{ url_for('tickets.list_tickets', status='resolved') }}" class="text-decoration-none">
     {% endif %}
       <div class="card text-center border-0 bg-success bg-opacity-10 h-100"
@@ -260,15 +288,24 @@ new Chart(document.getElementById('chartPrioridad'), {
 new Chart(document.getElementById('chartEstado'), {
   type: 'doughnut',
   data: {
-    labels: ['Abiertos', 'En progreso', 'Resueltos', 'Cerrados'],
+    labels: ['Abiertos', 'En progreso', 'Pendientes', 'Validación', 'Bloqueados', 'Resueltos', 'Cerrados'],
     datasets: [{
-      data: [estados.open, estados.in_progress, estados.resolved, estados.closed],
-      backgroundColor: ['#185FA5','#E65100','#3B6D11','#888'],
+      data: [
+        estados.open,
+        estados.in_progress,
+        estados.pending,
+        estados.validation,
+        estados.blocked,
+        estados.resolved,
+        estados.closed
+      ],
+      backgroundColor: ['#185FA5','#E65100','#854F0B','#4527A0','#880E4F','#3B6D11','#888'],
       borderWidth: 2,
     }]
   },
   options: {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: { position: 'bottom', labels: { boxWidth: 12 } }
     },

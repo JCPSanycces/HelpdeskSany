@@ -40,6 +40,8 @@
           <option value="open"        {% if status=='open' %}selected{% endif %}>Abierto</option>
           <option value="in_progress" {% if status=='in_progress' %}selected{% endif %}>En progreso</option>
           <option value="pending"     {% if status=='pending' %}selected{% endif %}>Pendiente</option>
+          <option value="validation" {% if status=='validation' %}selected{% endif %}>Validación</option>
+          <option value="blocked"    {% if status=='blocked' %}selected{% endif %}>Bloqueado</option>
           <option value="resolved"    {% if status=='resolved' %}selected{% endif %}>Resuelto</option>
           <option value="closed"      {% if status=='closed' %}selected{% endif %}>Cerrado</option>
         </select>

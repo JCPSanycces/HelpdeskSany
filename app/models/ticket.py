@@ -37,6 +37,8 @@ class Ticket(db.Model):
     'open': 'Abierto',
     'in_progress': 'En progreso',
     'pending': 'Pendiente',
+    'validation': 'Validación',
+    'blocked': 'Bloqueado',
     'resolved': 'Resuelto',
     'closed': 'Cerrado',
     }

@@ -304,7 +304,8 @@
 				<label class="form-label">Estado</label>
 				<select name="status" class="form-select">
 					{% for val, lbl in [('open','Abierto'),('in_progress','En progreso'),
-						('pending','Pendiente'),('resolved','Resuelto'),('closed','Cerrado')] %}
+					    ('pending','Pendiente'),('validation','Validación'),('blocked','Bloqueado'),
+    					('resolved','Resuelto'),('closed','Cerrado')] %}
 					<option value="{{ val }}" {% if ticket.status==val %}selected{% endif %}>{{ lbl }}</option>
 					{% endfor %}
 				</select>
