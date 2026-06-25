@@ -3,6 +3,45 @@
 
 {% block content %}
 
+<style>
+  #tickets-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .resizable-table th {
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .resizable-table th .th-content {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 8px);
+  }
+  .resizable-table th .resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    background: transparent;
+    z-index: 1;
+  }
+  .resizable-table th .resizer:hover,
+  .resizable-table th .resizer.active {
+    background: #185FA5;
+    opacity: .4;
+  }
+  .resizable-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+</style>
+
 {% macro sort_url(col) %}
   {{ url_for('tickets.list_tickets',
      status=status, priority=priority, category=category,
@@ -102,8 +141,8 @@
       </div>
 
       <!-- Campos ocultos para conservar ordenación -->
-      <input type="hidden" name="sort"  value="{{ sort }}">
-      <input type="hidden" name="order" value="{{ order }}">
+      <input type="hidden" name="sort"     value="{{ sort }}">
+      <input type="hidden" name="order"    value="{{ order }}">
       <input type="hidden" name="per_page" value="{{ per_page }}">
 
       <div class="col-auto">
@@ -114,7 +153,7 @@
   </div>
 </div>
 
-<!-- Barra inferior: resultado + cancelar ordenación + paginación -->
+<!-- Barra: resultado + cancelar ordenación + resetear columnas + paginación -->
 <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
   <div class="d-flex align-items-center gap-3">
     <small class="text-muted">
@@ -128,6 +167,11 @@
       <i class="bi bi-x-lg"></i> Cancelar ordenación
     </a>
     {% endif %}
+    <button class="btn btn-sm btn-outline-secondary py-0"
+            onclick="localStorage.removeItem('helpdesk_tickets_col_widths'); location.reload()"
+            title="Restablecer anchos de columna">
+      <i class="bi bi-arrows-collapse"></i> Resetear columnas
+    </button>
   </div>
 
   <!-- Selector de registros por página -->
@@ -147,50 +191,79 @@
 <!-- Tabla -->
 <div class="card">
   <div class="table-responsive">
-    <table class="table table-hover mb-0">
+    <table class="table table-hover mb-0 resizable-table" id="tickets-table">
       <thead class="table-light">
         <tr>
-          <th>
-            <a href="{{ sort_url('ticket_id') }}" class="text-decoration-none text-dark">
-              # {{ sort_icon('ticket_id') }}
-            </a>
+          <th style="width:130px">
+            <span class="th-content">
+              <a href="{{ sort_url('ticket_id') }}" class="text-decoration-none text-dark">
+                # {{ sort_icon('ticket_id') }}
+              </a>
+            </span>
+            <div class="resizer"></div>
           </th>
-          <th>
-            <a href="{{ sort_url('title') }}" class="text-decoration-none text-dark">
-              Asunto {{ sort_icon('title') }}
-            </a>
+          <th style="width:280px">
+            <span class="th-content">
+              <a href="{{ sort_url('title') }}" class="text-decoration-none text-dark">
+                Asunto {{ sort_icon('title') }}
+              </a>
+            </span>
+            <div class="resizer"></div>
           </th>
-          <th>
-            <a href="{{ sort_url('solicitante') }}" class="text-decoration-none text-dark">
-              Solicitante {{ sort_icon('solicitante') }}
-            </a>
+          <th style="width:140px">
+            <span class="th-content">
+              <a href="{{ sort_url('solicitante') }}" class="text-decoration-none text-dark">
+                Solicitante {{ sort_icon('solicitante') }}
+              </a>
+            </span>
+            <div class="resizer"></div>
           </th>
-          <th>
-            <a href="{{ sort_url('assigned') }}" class="text-decoration-none text-dark">
-              Asignado {{ sort_icon('assigned') }}
-            </a>
+          <th style="width:140px">
+            <span class="th-content">
+              <a href="{{ sort_url('assigned') }}" class="text-decoration-none text-dark">
+                Asignado {{ sort_icon('assigned') }}
+              </a>
+            </span>
+            <div class="resizer"></div>
           </th>
-          <th>
-            <a href="{{ sort_url('category') }}" class="text-decoration-none text-dark">
-              Categoría {{ sort_icon('category') }}
-            </a>
+          <th style="width:130px">
+            <span class="th-content">
+              <a href="{{ sort_url('category') }}" class="text-decoration-none text-dark">
+                Categoría {{ sort_icon('category') }}
+              </a>
+            </span>
+            <div class="resizer"></div>
           </th>
-          <th>
-            <a href="{{ sort_url('status') }}" class="text-decoration-none text-dark">
-              Estado {{ sort_icon('status') }}
-            </a>
+          <th style="width:110px">
+            <span class="th-content">
+              <a href="{{ sort_url('status') }}" class="text-decoration-none text-dark">
+                Estado {{ sort_icon('status') }}
+              </a>
+            </span>
+            <div class="resizer"></div>
           </th>
-          <th>
-            <a href="{{ sort_url('priority') }}" class="text-decoration-none text-dark">
-              Prioridad {{ sort_icon('priority') }}
-            </a>
+          <th style="width:100px">
+            <span class="th-content">
+              <a href="{{ sort_url('priority') }}" class="text-decoration-none text-dark">
+                Prioridad {{ sort_icon('priority') }}
+              </a>
+            </span>
+            <div class="resizer"></div>
           </th>
-          <th>
-            <a href="{{ sort_url('created_at') }}" class="text-decoration-none text-dark">
-              Fecha {{ sort_icon('created_at') }}
-            </a>
+          <th style="width:100px">
+            <span class="th-content">
+              <a href="{{ sort_url('created_at') }}" class="text-decoration-none text-dark">
+                Fecha {{ sort_icon('created_at') }}
+              </a>
+            </span>
+            <div class="resizer"></div>
           </th>
-          {% if current_user.is_admin() %}<th></th>{% endif %}
+          {% if current_user.is_admin() %}
+          <th style="width:50px">
+            <span class="th-content"></span>
+            <div class="resizer"></div>
+          </th>
+          {% endif %}
         </tr>
       </thead>
       <tbody>
@@ -200,7 +273,13 @@
           <td class="text-muted" style="font-size:.85rem">{{ t.ticket_id }}</td>
           <td>{{ t.title }}</td>
           <td>{{ t.solicitante.name if t.solicitante else '-' }}</td>
-          <td>{{ t.agente.name if t.agente else '<span class="text-muted">Sin asignar</span>' | safe }}</td>
+          <td>
+            {% if t.agente %}
+              {{ t.agente.name }}
+            {% else %}
+              <span class="text-muted">Sin asignar</span>
+            {% endif %}
+          </td>
           <td>{{ t.category or '-' }}</td>
           <td><span class="badge badge-{{ t.status }}">{{ t.status_label() }}</span></td>
           <td>{{ t.priority_label() }}</td>
@@ -232,7 +311,6 @@
 {% if pagination and pagination.pages > 1 %}
 <nav class="mt-3">
   <ul class="pagination pagination-sm justify-content-center mb-0">
-
     <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
       <a class="page-link" href="{{ url_for('tickets.list_tickets',
          status=status, priority=priority, category=category,
@@ -263,9 +341,89 @@
         <i class="bi bi-chevron-right"></i>
       </a>
     </li>
-
   </ul>
 </nav>
 {% endif %}
+
+<script>
+(function () {
+  const table = document.getElementById('tickets-table');
+  if (!table) return;
+
+  const STORAGE_KEY = 'helpdesk_tickets_col_widths';
+
+  // Forzar tabla con anchos fijos
+  table.style.tableLayout = 'fixed';
+
+  function saveWidths() {
+    const ths = Array.from(table.querySelectorAll('thead th'));
+    const widths = ths.map(th => th.getBoundingClientRect().width);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(widths));
+  }
+
+  function restoreWidths() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (!Array.isArray(saved)) return;
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      if (saved.length !== ths.length) return;
+      saved.forEach((w, i) => {
+        if (w > 30) ths[i].style.width = w + 'px';
+      });
+    } catch (e) {}
+  }
+
+  restoreWidths();
+
+  let dragging  = false;
+  let startX    = 0;
+  let startW    = 0;
+  let targetTh  = null;
+  let resizerEl = null;
+
+  // Mousedown en el resizer
+  table.querySelectorAll('th .resizer').forEach(resizer => {
+    resizer.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dragging   = true;
+      startX     = e.clientX;
+      targetTh   = this.closest('th');
+      startW     = targetTh.getBoundingClientRect().width;
+      resizerEl  = this;
+      this.classList.add('active');
+      document.body.style.cursor     = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.body.style.pointerEvents = 'none';
+      // Permitir que el resizer siga recibiendo eventos
+      this.style.pointerEvents = 'auto';
+    });
+  });
+
+  // Mousemove en window para capturar aunque el ratón salga de la tabla
+  window.addEventListener('mousemove', function (e) {
+    if (!dragging || !targetTh) return;
+    const diff = e.clientX - startX;
+    const newW = Math.max(40, startW + diff);
+    targetTh.style.width = newW + 'px';
+  });
+
+  // Mouseup en window para soltar siempre
+  window.addEventListener('mouseup', function () {
+    if (!dragging) return;
+    dragging = false;
+    if (resizerEl) {
+      resizerEl.classList.remove('active');
+      resizerEl.style.pointerEvents = '';
+    }
+    document.body.style.cursor        = '';
+    document.body.style.userSelect    = '';
+    document.body.style.pointerEvents = '';
+    saveWidths();
+    targetTh  = null;
+    resizerEl = null;
+  });
+})();
+</script>
 
 {% endblock %}
