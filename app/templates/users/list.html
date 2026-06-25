@@ -8,6 +8,73 @@
     <i class="bi bi-person-plus"></i> Nuevo usuario
   </a>
 </div>
+
+<!-- Buscador y filtros -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form class="row g-2 align-items-end" method="GET"
+          action="{{ url_for('users.list_users') }}">
+
+      <!-- Búsqueda por nombre/email -->
+      <div class="col-md-4">
+        <label class="form-label mb-1" style="font-size:.85rem">Buscar</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="search" class="form-control"
+                 placeholder="Nombre o email..."
+                 value="{{ search }}">
+        </div>
+      </div>
+
+      <!-- Filtro por rol -->
+      <div class="col-auto">
+        <label class="form-label mb-1" style="font-size:.85rem">Rol</label>
+        <select name="rol" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          <option value="admin" {% if rol=='admin' %}selected{% endif %}>Administrador</option>
+          <option value="agent" {% if rol=='agent' %}selected{% endif %}>Agente</option>
+          <option value="user"  {% if rol=='user'  %}selected{% endif %}>Usuario</option>
+        </select>
+      </div>
+
+      <!-- Filtro por departamento -->
+      <div class="col-auto">
+        <label class="form-label mb-1" style="font-size:.85rem">Departamento</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          {% for d in departamentos %}
+          <option value="{{ d }}" {% if department==d %}selected{% endif %}>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Filtro por estado -->
+      <div class="col-auto">
+        <label class="form-label mb-1" style="font-size:.85rem">Estado</label>
+        <select name="estado" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          <option value="activo"   {% if estado=='activo'   %}selected{% endif %}>Activo</option>
+          <option value="inactivo" {% if estado=='inactivo' %}selected{% endif %}>Inactivo</option>
+        </select>
+      </div>
+
+      <div class="col-auto">
+        <button type="submit" class="btn btn-secondary btn-sm">Filtrar</button>
+        <a href="{{ url_for('users.list_users') }}" class="btn btn-link btn-sm">Limpiar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Resultado -->
+{% if search or rol or department or estado %}
+<div class="mb-2">
+  <small class="text-muted">
+    {{ users | length }} usuario{{ 's' if users | length != 1 else '' }} encontrado{{ 's' if users | length != 1 else '' }}
+  </small>
+</div>
+{% endif %}
+
 <div class="card">
   <div class="table-responsive">
     <table class="table table-hover mb-0">
@@ -45,14 +112,12 @@
           </td>
           <td>
             <div class="d-flex gap-1">
-              <!-- Editar -->
               <a href="{{ url_for('users.edit_user', user_id=u.id) }}"
                  class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-pencil"></i>
               </a>
 
               {% if u.id != current_user.id %}
-              <!-- Activar/Desactivar -->
               <form method="POST"
                     action="{{ url_for('users.toggle_user', user_id=u.id) }}">
                 <button type="submit"
@@ -62,17 +127,25 @@
                 </button>
               </form>
 
-              <!-- Eliminar -->
               <form method="POST"
                     action="{{ url_for('users.delete_user', user_id=u.id) }}"
                     onsubmit="return confirm('¿Seguro que quieres eliminar a {{ u.name }}? Esta acción no se puede deshacer.')">
-                <button type="submit" class="btn btn-sm btn-outline-danger"
-                        title="Eliminar">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
               {% endif %}
             </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center py-4 text-muted">
+            {% if search or rol or department or estado %}
+              No se encontraron usuarios con esos criterios.
+            {% else %}
+              No hay usuarios registrados.
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

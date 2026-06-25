@@ -23,9 +23,45 @@ def admin_required(f):
 @login_required
 @admin_required
 def list_users():
-    users = User.query.order_by(User.name).all()
-    return render_template('users/list.html', users=users)
+    search     = request.args.get('search', '').strip()
+    rol        = request.args.get('rol', '')
+    department = request.args.get('department', '')
+    estado     = request.args.get('estado', '')
 
+    query = User.query
+
+    if search:
+        query = query.filter(
+            db.or_(
+                User.name.ilike(f'%{search}%'),
+                User.email.ilike(f'%{search}%')
+            )
+        )
+    if rol:
+        query = query.filter_by(role=rol)
+    if department:
+        query = query.filter_by(department=department)
+    if estado == 'activo':
+        query = query.filter_by(active=True)
+    elif estado == 'inactivo':
+        query = query.filter_by(active=False)
+
+    users = query.order_by(User.name).all()
+
+    # Departamentos únicos para el filtro
+    departamentos = db.session.query(User.department)\
+        .filter(User.department != None, User.department != '')\
+        .distinct().order_by(User.department).all()
+    departamentos = [d[0] for d in departamentos]
+
+    return render_template('users/list.html',
+        users=users,
+        search=search,
+        rol=rol,
+        department=department,
+        estado=estado,
+        departamentos=departamentos,
+    )
 
 # crear nuevos usuarios
 @users_bp.route('/new', methods=['GET', 'POST'])
