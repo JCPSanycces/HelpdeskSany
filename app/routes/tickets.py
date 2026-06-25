@@ -40,10 +40,13 @@ def list_tickets():
     category   = request.args.get('category', '')
     assigned   = request.args.get('assigned', '')
     search     = request.args.get('search', '').strip()
+    fecha_ini  = request.args.get('fecha_ini', '').strip()
+    fecha_fin  = request.args.get('fecha_fin', '').strip()
     sort       = request.args.get('sort', 'created_at')
     order      = request.args.get('order', 'desc')
     per_page   = request.args.get('per_page', '25')
     page       = request.args.get('page', 1, type=int)
+    export     = request.args.get('export', '')
 
     if current_user.is_agent():
         query = Ticket.query
@@ -68,8 +71,24 @@ def list_tickets():
     elif assigned:
         query = query.filter(Ticket.assigned_to == int(assigned))
 
+    # Filtro por fechas
+    from datetime import datetime as dt
+    if fecha_ini:
+        try:
+            fi = dt.strptime(fecha_ini, '%Y-%m-%d')
+            query = query.filter(Ticket.created_at >= fi)
+        except ValueError:
+            pass
+    if fecha_fin:
+        try:
+            ff = dt.strptime(fecha_fin, '%Y-%m-%d')
+            # Incluir todo el día final
+            from datetime import timedelta
+            query = query.filter(Ticket.created_at < ff + timedelta(days=1))
+        except ValueError:
+            pass
+
     if search:
-        # Join con User para buscar por nombre del solicitante
         query = query.join(User, Ticket.created_by == User.id)\
             .filter(
                 db.or_(
@@ -81,7 +100,7 @@ def list_tickets():
 
     # Ordenación
     if sort == 'solicitante':
-        if not search:  # evitar doble join si ya hicimos el join de búsqueda
+        if not search:
             query = query.join(User, Ticket.created_by == User.id)
         query = query.order_by(
             User.name.asc() if order == 'asc' else User.name.desc()
@@ -106,6 +125,11 @@ def list_tickets():
             sort_col.asc() if order == 'asc' else sort_col.desc()
         )
 
+    # Exportación (sin paginación, todos los registros filtrados)
+    if export in ('csv', 'xlsx', 'txt'):
+        todos = query.all()
+        return _exportar_tickets(todos, export)
+
     # Paginación
     if per_page == 'all':
         tickets    = query.all()
@@ -117,7 +141,6 @@ def list_tickets():
         tickets      = pagination.items
         total        = pagination.total
 
-    # Agentes disponibles para el filtro de asignado
     agentes = User.query.filter(
         User.role.in_(['admin', 'agent']), User.active == True
     ).order_by(User.name).all()
@@ -131,11 +154,101 @@ def list_tickets():
         category=category,
         assigned=assigned,
         search=search,
+        fecha_ini=fecha_ini,
+        fecha_fin=fecha_fin,
         sort=sort,
         order=order,
         per_page=per_page,
         agentes=agentes,
     )
+
+
+def _exportar_tickets(tickets, formato):
+    """Genera el fichero de exportación en el formato indicado."""
+    import io
+    from flask import make_response
+
+    cabeceras = ['#', 'Asunto', 'Solicitante', 'Asignado', 'Categoría',
+                 'Estado', 'Prioridad', 'Fecha creación']
+
+    filas = []
+    for t in tickets:
+        filas.append([
+            t.ticket_id,
+            t.title,
+            t.solicitante.name if t.solicitante else '-',
+            t.agente.name if t.agente else 'Sin asignar',
+            t.category or '-',
+            t.status_label(),
+            t.priority_label(),
+            t.created_at.strftime('%d/%m/%Y %H:%M'),
+        ])
+
+    if formato == 'csv':
+        import csv
+        buf = io.StringIO()
+        writer = csv.writer(buf, delimiter=';')
+        writer.writerow(cabeceras)
+        writer.writerows(filas)
+        resp = make_response(buf.getvalue())
+        resp.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
+        resp.headers['Content-Disposition'] = 'attachment; filename=tickets.csv'
+        return resp
+
+    elif formato == 'xlsx':
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Tickets'
+
+        # Cabecera con estilo
+        header_font = Font(bold=True, color='FFFFFF')
+        header_fill = PatternFill('solid', fgColor='185FA5')
+        for col, cab in enumerate(cabeceras, 1):
+            cell = ws.cell(row=1, column=col, value=cab)
+            cell.font   = header_font
+            cell.fill   = header_fill
+            cell.alignment = Alignment(horizontal='center')
+
+        # Datos
+        for row, fila in enumerate(filas, 2):
+            for col, valor in enumerate(fila, 1):
+                ws.cell(row=row, column=col, value=valor)
+
+        # Ajustar ancho de columnas
+        for col in ws.columns:
+            max_len = max(len(str(c.value or '')) for c in col)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 50)
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        resp = make_response(buf.read())
+        resp.headers['Content-Type'] = \
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        resp.headers['Content-Disposition'] = 'attachment; filename=tickets.xlsx'
+        return resp
+
+    elif formato == 'txt':
+        # Formato tabla de texto con columnas alineadas
+        anchos = [max(len(str(cabeceras[i])),
+                      max((len(str(f[i])) for f in filas), default=0))
+                  for i in range(len(cabeceras))]
+
+        def fila_txt(valores):
+            return '  '.join(str(v).ljust(anchos[i]) for i, v in enumerate(valores))
+
+        separador = '-' * (sum(anchos) + 2 * len(anchos))
+        lineas = [fila_txt(cabeceras), separador]
+        for f in filas:
+            lineas.append(fila_txt(f))
+
+        contenido = '\n'.join(lineas)
+        resp = make_response(contenido)
+        resp.headers['Content-Type'] = 'text/plain; charset=utf-8'
+        resp.headers['Content-Disposition'] = 'attachment; filename=tickets.txt'
+        return resp
 
 
 @tickets_bp.route('/new', methods=['GET', 'POST'])
