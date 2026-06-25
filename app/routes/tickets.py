@@ -41,7 +41,7 @@ def list_tickets():
     sort     = request.args.get('sort', 'created_at')
     order    = request.args.get('order', 'desc')
 
-    if current_user.is_admin():
+    if current_user.is_agent():  # admin y agent ven todos
         query = Ticket.query
     else:
         tickets_participante = db.session.query(TicketParticipant.ticket_id)\
@@ -170,7 +170,7 @@ def detail(ticket_id):
         ~User.id.in_(ids_participantes)
     ).order_by(User.name).all()
 
-    if current_user.is_admin():
+    if current_user.is_agent():  # admin y agent navegan por todos
         nav_query = Ticket.query
     else:
         tickets_participante = db.session.query(TicketParticipant.ticket_id)\

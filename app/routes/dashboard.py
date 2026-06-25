@@ -13,7 +13,7 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @dashboard_bp.route('/')
 @login_required
 def index():
-    if current_user.is_admin():
+    if current_user.is_agent():  # admin y agent ven todos
         base_query = Ticket.query
     else:
         tickets_participante = db.session.query(TicketParticipant.ticket_id)\
