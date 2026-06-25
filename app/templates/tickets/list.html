@@ -6,6 +6,7 @@
 {% macro sort_url(col) %}
   {{ url_for('tickets.list_tickets',
      status=status, priority=priority, category=category,
+     assigned=assigned, search=search, per_page=per_page,
      sort=col,
      order='asc' if (sort == col and order == 'desc') else 'desc') }}
 {% endmacro %}
@@ -29,25 +30,41 @@
   </a>
 </div>
 
-<!-- Filtros -->
-<div class="card mb-4">
-  <div class="card-body py-2">
-    <form class="row g-2 align-items-end" id="form-filtros">
+<!-- Filtros y buscador -->
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form class="row g-2 align-items-end" method="GET"
+          action="{{ url_for('tickets.list_tickets') }}" id="form-filtros">
+
+      <!-- Buscador -->
+      <div class="col-md-3">
+        <label class="form-label mb-1" style="font-size:.85rem">Buscar</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="search" class="form-control"
+                 placeholder="Asunto o solicitante..."
+                 value="{{ search }}">
+        </div>
+      </div>
+
+      <!-- Estado -->
       <div class="col-auto">
-        <label class="form-label mb-0">Estado</label>
+        <label class="form-label mb-1" style="font-size:.85rem">Estado</label>
         <select name="status" class="form-select form-select-sm">
           <option value="">Todos</option>
           <option value="open"        {% if status=='open' %}selected{% endif %}>Abierto</option>
           <option value="in_progress" {% if status=='in_progress' %}selected{% endif %}>En progreso</option>
           <option value="pending"     {% if status=='pending' %}selected{% endif %}>Pendiente</option>
-          <option value="validation" {% if status=='validation' %}selected{% endif %}>Validación</option>
-          <option value="blocked"    {% if status=='blocked' %}selected{% endif %}>Bloqueado</option>
+          <option value="validation"  {% if status=='validation' %}selected{% endif %}>Validación</option>
+          <option value="blocked"     {% if status=='blocked' %}selected{% endif %}>Bloqueado</option>
           <option value="resolved"    {% if status=='resolved' %}selected{% endif %}>Resuelto</option>
           <option value="closed"      {% if status=='closed' %}selected{% endif %}>Cerrado</option>
         </select>
       </div>
+
+      <!-- Prioridad -->
       <div class="col-auto">
-        <label class="form-label mb-0">Prioridad</label>
+        <label class="form-label mb-1" style="font-size:.85rem">Prioridad</label>
         <select name="priority" class="form-select form-select-sm">
           <option value="">Todas</option>
           <option value="critical" {% if priority=='critical' %}selected{% endif %}>Crítica</option>
@@ -56,8 +73,10 @@
           <option value="low"      {% if priority=='low' %}selected{% endif %}>Baja</option>
         </select>
       </div>
+
+      <!-- Categoría -->
       <div class="col-auto">
-        <label class="form-label mb-0">Categoría</label>
+        <label class="form-label mb-1" style="font-size:.85rem">Categoría</label>
         <select name="category" class="form-select form-select-sm">
           <option value="">Todas</option>
           <option value="Sage X3"          {% if category=='Sage X3' %}selected{% endif %}>Sage X3</option>
@@ -65,44 +84,67 @@
           <option value="Hardware"         {% if category=='Hardware' %}selected{% endif %}>Hardware</option>
           <option value="Redes e internet" {% if category=='Redes e internet' %}selected{% endif %}>Redes e internet</option>
           <option value="EDI"              {% if category=='EDI' %}selected{% endif %}>EDI</option>
-		  <option value="Analisis de datos/PowerBI" {% if category=='Analisis de datos/PowerBI' %}selected{% endif %}>Analisis de datos/PowerBI</option>
         </select>
       </div>
-      <!-- Campos ocultos para conservar la ordenación al filtrar -->
+
+      <!-- Asignado -->
+      <div class="col-auto">
+        <label class="form-label mb-1" style="font-size:.85rem">Asignado a</label>
+        <select name="assigned" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          <option value="none" {% if assigned=='none' %}selected{% endif %}>Sin asignar</option>
+          {% for a in agentes %}
+          <option value="{{ a.id }}" {% if assigned==a.id|string %}selected{% endif %}>
+            {{ a.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Campos ocultos para conservar ordenación -->
       <input type="hidden" name="sort"  value="{{ sort }}">
       <input type="hidden" name="order" value="{{ order }}">
+      <input type="hidden" name="per_page" value="{{ per_page }}">
+
       <div class="col-auto">
         <button type="submit" class="btn btn-secondary btn-sm">Filtrar</button>
-        <a href="{{ url_for('tickets.list_tickets') }}" class="btn btn-link btn-sm">Limpiar todo</a>
+        <a href="{{ url_for('tickets.list_tickets') }}" class="btn btn-link btn-sm">Limpiar</a>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Indicador de ordenación activa + botón cancelar -->
-{% if sort and sort != 'created_at' or order == 'asc' %}
-<div class="mb-2 d-flex align-items-center gap-2">
-  <small class="text-muted">
-    Ordenado por
-    <strong>
-      {% if sort == 'ticket_id' %}#
-      {% elif sort == 'title' %}Asunto
-      {% elif sort == 'solicitante' %}Solicitante
-      {% elif sort == 'category' %}Categoría
-      {% elif sort == 'status' %}Estado
-      {% elif sort == 'priority' %}Prioridad
-      {% elif sort == 'created_at' %}Fecha
-      {% endif %}
-    </strong>
-    ({{ 'ascendente' if order == 'asc' else 'descendente' }})
-  </small>
-  <a href="{{ url_for('tickets.list_tickets', status=status, priority=priority, category=category) }}"
-     class="btn btn-sm btn-outline-secondary py-0">
-    <i class="bi bi-x-lg"></i> Cancelar ordenación
-  </a>
-</div>
-{% endif %}
+<!-- Barra inferior: resultado + cancelar ordenación + paginación -->
+<div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+  <div class="d-flex align-items-center gap-3">
+    <small class="text-muted">
+      {{ total }} ticket{{ 's' if total != 1 else '' }}
+      {% if pagination %} · página {{ pagination.page }} de {{ pagination.pages }}{% endif %}
+    </small>
+    {% if sort and (sort != 'created_at' or order == 'asc') %}
+    <a href="{{ url_for('tickets.list_tickets', status=status, priority=priority,
+               category=category, assigned=assigned, search=search, per_page=per_page) }}"
+       class="btn btn-sm btn-outline-secondary py-0">
+      <i class="bi bi-x-lg"></i> Cancelar ordenación
+    </a>
+    {% endif %}
+  </div>
 
+  <!-- Selector de registros por página -->
+  <div class="d-flex align-items-center gap-2">
+    <small class="text-muted">Mostrar:</small>
+    {% for pp in ['25', '50', '100', 'all'] %}
+    <a href="{{ url_for('tickets.list_tickets', status=status, priority=priority,
+               category=category, assigned=assigned, search=search,
+               sort=sort, order=order, per_page=pp, page=1) }}"
+       class="btn btn-sm {% if per_page == pp %}btn-secondary{% else %}btn-outline-secondary{% endif %} py-0 px-2">
+      {{ 'Todos' if pp == 'all' else pp }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Tabla -->
 <div class="card">
   <div class="table-responsive">
     <table class="table table-hover mb-0">
@@ -121,6 +163,11 @@
           <th>
             <a href="{{ sort_url('solicitante') }}" class="text-decoration-none text-dark">
               Solicitante {{ sort_icon('solicitante') }}
+            </a>
+          </th>
+          <th>
+            <a href="{{ sort_url('assigned') }}" class="text-decoration-none text-dark">
+              Asignado {{ sort_icon('assigned') }}
             </a>
           </th>
           <th>
@@ -153,6 +200,7 @@
           <td class="text-muted" style="font-size:.85rem">{{ t.ticket_id }}</td>
           <td>{{ t.title }}</td>
           <td>{{ t.solicitante.name if t.solicitante else '-' }}</td>
+          <td>{{ t.agente.name if t.agente else '<span class="text-muted">Sin asignar</span>' | safe }}</td>
           <td>{{ t.category or '-' }}</td>
           <td><span class="badge badge-{{ t.status }}">{{ t.status_label() }}</span></td>
           <td>{{ t.priority_label() }}</td>
@@ -161,7 +209,7 @@
           <td onclick="event.stopPropagation()">
             <form method="POST"
                   action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
-                  onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}? Esta acción no se puede deshacer.')">
+                  onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}?')">
               <button type="submit" class="btn btn-sm btn-outline-danger">
                 <i class="bi bi-trash"></i>
               </button>
@@ -171,7 +219,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="{% if current_user.is_admin() %}8{% else %}7{% endif %}"
+          <td colspan="{% if current_user.is_admin() %}9{% else %}8{% endif %}"
               class="text-center py-4 text-muted">No hay tickets</td>
         </tr>
         {% endfor %}
@@ -179,5 +227,45 @@
     </table>
   </div>
 </div>
+
+<!-- Paginación -->
+{% if pagination and pagination.pages > 1 %}
+<nav class="mt-3">
+  <ul class="pagination pagination-sm justify-content-center mb-0">
+
+    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('tickets.list_tickets',
+         status=status, priority=priority, category=category,
+         assigned=assigned, search=search, sort=sort, order=order,
+         per_page=per_page, page=pagination.prev_num) }}">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+    </li>
+
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+      <li class="page-item {% if p == pagination.page %}active{% endif %}">
+        <a class="page-link" href="{{ url_for('tickets.list_tickets',
+           status=status, priority=priority, category=category,
+           assigned=assigned, search=search, sort=sort, order=order,
+           per_page=per_page, page=p) }}">{{ p }}</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+
+    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('tickets.list_tickets',
+         status=status, priority=priority, category=category,
+         assigned=assigned, search=search, sort=sort, order=order,
+         per_page=per_page, page=pagination.next_num) }}">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    </li>
+
+  </ul>
+</nav>
+{% endif %}
 
 {% endblock %}

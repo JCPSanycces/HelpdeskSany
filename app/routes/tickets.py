@@ -35,13 +35,17 @@ def _get_participantes(ticket_id):
 @tickets_bp.route('/')
 @login_required
 def list_tickets():
-    status   = request.args.get('status', '')
-    priority = request.args.get('priority', '')
-    category = request.args.get('category', '')
-    sort     = request.args.get('sort', 'created_at')
-    order    = request.args.get('order', 'desc')
+    status     = request.args.get('status', '')
+    priority   = request.args.get('priority', '')
+    category   = request.args.get('category', '')
+    assigned   = request.args.get('assigned', '')
+    search     = request.args.get('search', '').strip()
+    sort       = request.args.get('sort', 'created_at')
+    order      = request.args.get('order', 'desc')
+    per_page   = request.args.get('per_page', '25')
+    page       = request.args.get('page', 1, type=int)
 
-    if current_user.is_agent():  # admin y agent ven todos
+    if current_user.is_agent():
         query = Ticket.query
     else:
         tickets_participante = db.session.query(TicketParticipant.ticket_id)\
@@ -59,12 +63,34 @@ def list_tickets():
         query = query.filter_by(priority=priority)
     if category:
         query = query.filter_by(category=category)
+    if assigned == 'none':
+        query = query.filter(Ticket.assigned_to == None)
+    elif assigned:
+        query = query.filter(Ticket.assigned_to == int(assigned))
 
-    # Ordenación por solicitante requiere join con User
+    if search:
+        # Join con User para buscar por nombre del solicitante
+        query = query.join(User, Ticket.created_by == User.id)\
+            .filter(
+                db.or_(
+                    Ticket.title.ilike(f'%{search}%'),
+                    User.name.ilike(f'%{search}%'),
+                    User.email.ilike(f'%{search}%'),
+                )
+            )
+
+    # Ordenación
     if sort == 'solicitante':
-        query = query.join(User, Ticket.created_by == User.id)
+        if not search:  # evitar doble join si ya hicimos el join de búsqueda
+            query = query.join(User, Ticket.created_by == User.id)
         query = query.order_by(
             User.name.asc() if order == 'asc' else User.name.desc()
+        )
+    elif sort == 'assigned':
+        AgentUser = db.aliased(User)
+        query = query.outerjoin(AgentUser, Ticket.assigned_to == AgentUser.id)
+        query = query.order_by(
+            AgentUser.name.asc() if order == 'asc' else AgentUser.name.desc()
         )
     else:
         sort_map = {
@@ -80,10 +106,36 @@ def list_tickets():
             sort_col.asc() if order == 'asc' else sort_col.desc()
         )
 
-    tickets = query.all()
-    return render_template('tickets/list.html', tickets=tickets,
-                           status=status, priority=priority, category=category,
-                           sort=sort, order=order)
+    # Paginación
+    if per_page == 'all':
+        tickets    = query.all()
+        pagination = None
+        total      = len(tickets)
+    else:
+        per_page_int = int(per_page) if per_page in ('25', '50', '100') else 25
+        pagination   = query.paginate(page=page, per_page=per_page_int, error_out=False)
+        tickets      = pagination.items
+        total        = pagination.total
+
+    # Agentes disponibles para el filtro de asignado
+    agentes = User.query.filter(
+        User.role.in_(['admin', 'agent']), User.active == True
+    ).order_by(User.name).all()
+
+    return render_template('tickets/list.html',
+        tickets=tickets,
+        pagination=pagination,
+        total=total,
+        status=status,
+        priority=priority,
+        category=category,
+        assigned=assigned,
+        search=search,
+        sort=sort,
+        order=order,
+        per_page=per_page,
+        agentes=agentes,
+    )
 
 
 @tickets_bp.route('/new', methods=['GET', 'POST'])
