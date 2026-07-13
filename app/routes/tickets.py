@@ -16,6 +16,7 @@ from app.models.comment_attachment import CommentAttachment
 from flask import jsonify
 from app.utils.sanitize import limpiar_html
 from datetime import datetime
+from flask import session
 
 tickets_bp = Blueprint('tickets', __name__)
 
@@ -144,6 +145,9 @@ def list_tickets():
     agentes = User.query.filter(
         User.role.in_(['admin', 'agent']), User.active == True
     ).order_by(User.name).all()
+
+    # Guardar la URL del listado para poder volver con los filtros activos
+    session['tickets_list_url'] = request.url
 
     return render_template('tickets/list.html',
         tickets=tickets,
@@ -371,6 +375,7 @@ def detail(ticket_id):
         prev_id=prev_id,
         next_id=next_id,
         last_id=last_id,
+        back_url=session.get('tickets_list_url', url_for('tickets.list_tickets')),
     )
 
 

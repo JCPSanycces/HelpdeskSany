@@ -52,9 +52,11 @@
 							{% endif %}
 						</div>
 
-						<a href="{{ url_for('tickets.list_tickets', status='open') }}" class="btn btn-sm btn-outline-secondary">
+						<!-- Botón de volver al listado -->
+						<a href="{{ back_url }}" class="btn btn-sm btn-outline-secondary">
 							<i class="bi bi-arrow-left"></i> Volver
 						</a>
+
 						{% if current_user.is_admin() %}
 						<form method="POST"
 							action="{{ url_for('tickets.delete_ticket', ticket_id=ticket.ticket_id) }}"
