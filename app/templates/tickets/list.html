@@ -46,7 +46,7 @@
   {{ url_for('tickets.list_tickets',
      status=status, priority=priority, category=category,
      assigned=assigned, search=search, per_page=per_page,
-     fecha_ini=fecha_ini, fecha_fin=fecha_fin,
+     fecha_mod_ini=fecha_mod_ini, fecha_mod_fin=fecha_mod_fin,
      sort=col,
      order='asc' if (sort == col and order == 'desc') else 'desc') }}
 {% endmacro %}
@@ -142,26 +142,26 @@
         </select>
       </div>
 
-      <!-- Fecha inicio -->
+      <!-- Fecha modificación estado - Desde -->
       <div class="col-auto">
-        <label class="form-label mb-1" style="font-size:.85rem">Desde</label>
-        <input type="date" name="fecha_ini" class="form-control form-control-sm"
-              value="{{ fecha_ini }}">
+        <label class="form-label mb-1" style="font-size:.85rem">Modif. desde</label>
+        <input type="date" name="fecha_mod_ini" class="form-control form-control-sm"
+              value="{{ fecha_mod_ini }}">
       </div>
 
-      <!-- Fecha fin -->
+      <!-- Fecha modificación estado - Hasta -->
       <div class="col-auto">
-        <label class="form-label mb-1" style="font-size:.85rem">Hasta</label>
-        <input type="date" name="fecha_fin" class="form-control form-control-sm"
-              value="{{ fecha_fin }}">
+        <label class="form-label mb-1" style="font-size:.85rem">Modif. hasta</label>
+        <input type="date" name="fecha_mod_fin" class="form-control form-control-sm"
+              value="{{ fecha_mod_fin }}">
       </div>
 
       <!-- Campos ocultos para conservar ordenación -->
       <input type="hidden" name="sort"     value="{{ sort }}">
       <input type="hidden" name="order"    value="{{ order }}">
       <input type="hidden" name="per_page" value="{{ per_page }}">
-      <input type="hidden" name="fecha_ini" value="{{ fecha_ini }}">
-      <input type="hidden" name="fecha_fin" value="{{ fecha_fin }}">
+      <input type="hidden" name="fecha_mod_ini" value="{{ fecha_mod_ini }}">
+      <input type="hidden" name="fecha_mod_fin" value="{{ fecha_mod_fin }}">
 
       <div class="col-auto">
         <button type="submit" class="btn btn-secondary btn-sm">Filtrar</button>
@@ -180,7 +180,7 @@
     </small>
     {% if sort and (sort != 'created_at' or order == 'asc') %}
     <a href="{{ url_for('tickets.list_tickets', status=status, priority=priority,
-               category=category, assigned=assigned, search=search, per_page=per_page, fecha_ini=fecha_ini, fecha_fin=fecha_fin) }}"
+               category=category, assigned=assigned, search=search, per_page=per_page, fecha_mod_ini=fecha_mod_ini, fecha_mod_fin=fecha_mod_fin) }}"
        class="btn btn-sm btn-outline-secondary py-0">
       <i class="bi bi-x-lg"></i> Cancelar ordenación
     </a>
@@ -197,21 +197,21 @@
     <small class="text-muted me-1">Exportar:</small>
     <a href="{{ url_for('tickets.list_tickets', status=status, priority=priority,
               category=category, assigned=assigned, search=search,
-              fecha_ini=fecha_ini, fecha_fin=fecha_fin,
+              fecha_mod_ini=fecha_mod_ini, fecha_mod_fin=fecha_mod_fin,
               sort=sort, order=order, export='csv') }}"
       class="btn btn-sm btn-outline-success py-0 px-2" title="Exportar a CSV">
       <i class="bi bi-filetype-csv"></i> CSV
     </a>
     <a href="{{ url_for('tickets.list_tickets', status=status, priority=priority,
               category=category, assigned=assigned, search=search,
-              fecha_ini=fecha_ini, fecha_fin=fecha_fin,
+              fecha_mod_ini=fecha_mod_ini, fecha_mod_fin=fecha_mod_fin,
               sort=sort, order=order, export='xlsx') }}"
       class="btn btn-sm btn-outline-success py-0 px-2" title="Exportar a Excel">
       <i class="bi bi-file-earmark-excel"></i> Excel
     </a>
     <a href="{{ url_for('tickets.list_tickets', status=status, priority=priority,
               category=category, assigned=assigned, search=search,
-              fecha_ini=fecha_ini, fecha_fin=fecha_fin,
+              fecha_mod_ini=fecha_mod_ini, fecha_mod_fin=fecha_mod_fin,
               sort=sort, order=order, export='txt') }}"
       class="btn btn-sm btn-outline-secondary py-0 px-2" title="Exportar a TXT">
       <i class="bi bi-filetype-txt"></i> TXT
@@ -224,7 +224,7 @@
     {% for pp in ['25', '50', '100', 'all'] %}
     <a href="{{ url_for('tickets.list_tickets', status=status, priority=priority,
                category=category, assigned=assigned, search=search,
-               sort=sort, order=order, per_page=pp, page=1, fecha_ini=fecha_ini, fecha_fin=fecha_fin) }}"
+               sort=sort, order=order, per_page=pp, page=1, fecha_mod_ini=fecha_mod_ini, fecha_mod_fin=fecha_mod_fin) }}"
        class="btn btn-sm {% if per_page == pp %}btn-secondary{% else %}btn-outline-secondary{% endif %} py-0 px-2">
       {{ 'Todos' if pp == 'all' else pp }}
     </a>
@@ -296,8 +296,8 @@
           </th>
           <th style="width:100px">
             <span class="th-content">
-              <a href="{{ sort_url('created_at') }}" class="text-decoration-none text-dark">
-                Fecha {{ sort_icon('created_at') }}
+              <a href="{{ sort_url('status_updated_at') }}" class="text-decoration-none text-dark">
+                Últ. cambio {{ sort_icon('status_updated_at') }}
               </a>
             </span>
             <div class="resizer"></div>
@@ -327,7 +327,13 @@
           <td>{{ t.category or '-' }}</td>
           <td><span class="badge badge-{{ t.status }}">{{ t.status_label() }}</span></td>
           <td>{{ t.priority_label() }}</td>
-          <td class="text-muted" style="font-size:.85rem">{{ t.created_at.strftime('%d/%m/%Y') }}</td>
+          <td class="text-muted" style="font-size:.85rem">
+            {% if t.status_updated_at %}
+              {{ t.status_updated_at.strftime('%d/%m/%Y %H:%M') }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
           {% if current_user.is_admin() %}
           <td onclick="event.stopPropagation()">
             <form method="POST"

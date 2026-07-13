@@ -32,6 +32,9 @@ class Ticket(db.Model):
     # Relación con TicketAttachment (archivos adjuntos al ticket que se crean desde el correo)
     attachments = db.relationship('TicketAttachment', backref='ticket',
                               lazy='dynamic', cascade='all, delete-orphan')
+    
+    # Fecha de actualización del estado del ticket
+    status_updated_at = db.Column(db.DateTime, nullable=True)
 
     STATUS_LABELS = {
     'open': 'Abierto',

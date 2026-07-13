@@ -4,6 +4,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_mail import Mail
 from apscheduler.schedulers.background import BackgroundScheduler
+from sqlalchemy import inspect
 
 # Creamos los objetos globales (sin app todavia)
 db = SQLAlchemy()
@@ -57,7 +58,7 @@ def create_app():
     try:
         with app.app_context():
             # If the table was created, read stored flags
-            if db.engine.has_table(AppSetting.__tablename__):
+            if inspect(db.engine).has_table(AppSetting.__tablename__):
                 val = AppSetting.get_bool('disable_email_notifications', default=app.config.get('DISABLE_EMAIL_NOTIFICATIONS', False))
                 app.config['DISABLE_EMAIL_NOTIFICATIONS'] = val
                 app.logger.info(f'AppSetting loaded: disable_email_notifications={val}')

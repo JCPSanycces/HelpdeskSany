@@ -17,6 +17,8 @@ from flask import jsonify
 from app.utils.sanitize import limpiar_html
 from datetime import datetime
 from flask import session
+import pytz
+from app.utils.fechas import ahora_espana
 
 tickets_bp = Blueprint('tickets', __name__)
 
@@ -41,8 +43,8 @@ def list_tickets():
     category   = request.args.get('category', '')
     assigned   = request.args.get('assigned', '')
     search     = request.args.get('search', '').strip()
-    fecha_ini  = request.args.get('fecha_ini', '').strip()
-    fecha_fin  = request.args.get('fecha_fin', '').strip()
+    fecha_mod_ini  = request.args.get('fecha_mod_ini', '').strip()
+    fecha_mod_fin  = request.args.get('fecha_mod_fin', '').strip()
     sort       = request.args.get('sort', 'created_at')
     order      = request.args.get('order', 'desc')
     per_page   = request.args.get('per_page', '25')
@@ -72,20 +74,18 @@ def list_tickets():
     elif assigned:
         query = query.filter(Ticket.assigned_to == int(assigned))
 
-    # Filtro por fechas
-    from datetime import datetime as dt
-    if fecha_ini:
+    # Filtro por fecha de modificación de estado
+    from datetime import datetime as dt, timedelta
+    if fecha_mod_ini:
         try:
-            fi = dt.strptime(fecha_ini, '%Y-%m-%d')
-            query = query.filter(Ticket.created_at >= fi)
+            fi = dt.strptime(fecha_mod_ini, '%Y-%m-%d')
+            query = query.filter(Ticket.status_updated_at >= fi)
         except ValueError:
             pass
-    if fecha_fin:
+    if fecha_mod_fin:
         try:
-            ff = dt.strptime(fecha_fin, '%Y-%m-%d')
-            # Incluir todo el día final
-            from datetime import timedelta
-            query = query.filter(Ticket.created_at < ff + timedelta(days=1))
+            ff = dt.strptime(fecha_mod_fin, '%Y-%m-%d')
+            query = query.filter(Ticket.status_updated_at < ff + timedelta(days=1))
         except ValueError:
             pass
 
@@ -119,9 +119,9 @@ def list_tickets():
             'category':   Ticket.category,
             'status':     Ticket.status,
             'priority':   Ticket.priority,
-            'created_at': Ticket.created_at,
+            'status_updated_at': Ticket.status_updated_at,
         }
-        sort_col = sort_map.get(sort, Ticket.created_at)
+        sort_col = sort_map.get(sort, Ticket.status_updated_at)
         query = query.order_by(
             sort_col.asc() if order == 'asc' else sort_col.desc()
         )
@@ -158,8 +158,8 @@ def list_tickets():
         category=category,
         assigned=assigned,
         search=search,
-        fecha_ini=fecha_ini,
-        fecha_fin=fecha_fin,
+        fecha_mod_ini=fecha_mod_ini,
+        fecha_mod_fin=fecha_mod_fin,
         sort=sort,
         order=order,
         per_page=per_page,
@@ -173,7 +173,7 @@ def _exportar_tickets(tickets, formato):
     from flask import make_response
 
     cabeceras = ['#', 'Asunto', 'Solicitante', 'Asignado', 'Categoría',
-                 'Estado', 'Prioridad', 'Fecha creación']
+                 'Estado', 'Prioridad', 'Últ. cambio estado']
 
     filas = []
     for t in tickets:
@@ -185,7 +185,7 @@ def _exportar_tickets(tickets, formato):
             t.category or '-',
             t.status_label(),
             t.priority_label(),
-            t.created_at.strftime('%d/%m/%Y %H:%M'),
+            t.status_updated_at.strftime('%d/%m/%Y %H:%M') if t.status_updated_at else '-',
         ])
 
     if formato == 'csv':
@@ -418,17 +418,25 @@ def update_ticket(ticket_id):
     if nuevo_agente_id:
         _añadir_participante(ticket_id, int(nuevo_agente_id))
 
+    # Guardar fecha de cambio de estado ANTES del commit
+    if nuevo_estado != estado_anterior:
+        ticket.status_updated_at = ahora_espana()
+
     db.session.commit()
     participantes = _get_participantes(ticket_id)
 
+    # Notificaciones por email
+    # Notificar cambio de estado
     if nuevo_agente_id and str(nuevo_agente_id) != str(agente_anterior_id):
         agente = User.query.get(int(nuevo_agente_id))
         if agente:
             enviar_notificacion_asignacion(agente, ticket)
 
+    # Email si el estado ha cambiado
     if nuevo_estado != estado_anterior:
         enviar_notificacion_cambio_estado(ticket, estado_anterior, participantes)
 
+    # Notificar a los participantes añadidos recientemente
     if nuevos_ids:
         from app.utils.email import _enviar, _base_html
         for uid in nuevos_ids:
