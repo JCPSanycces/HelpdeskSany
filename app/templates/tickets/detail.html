@@ -257,6 +257,7 @@
 			{% endfor %}
 
 			<!-- Formulario de nuevo comentario -->
+			 {% if ticket.status != 'closed' or current_user.is_agent() %}
 			<div class='card mt-3'>
 				<div class='card-body'>
 					<form method='POST'
@@ -283,6 +284,11 @@
 					</form>
 				</div>
 			</div>
+			{% else %}
+			<div class="alert alert-secondary mt-3 mb-0" style="font-size:.9rem">
+				<i class="bi bi-info-circle"></i> Este ticket está cerrado. No se pueden añadir comentarios.
+			</div>
+			{% endif %}
 
 		</div>
 

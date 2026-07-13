@@ -458,6 +458,12 @@ def update_ticket(ticket_id):
 @login_required
 def add_comment(ticket_id):
     ticket = Ticket.query.get_or_404(ticket_id)
+
+    # Usuarios con rol 'user' no pueden comentar en tickets cerrados
+    if ticket.status == 'closed' and not current_user.is_agent():
+        flash('No puedes añadir comentarios a un ticket cerrado.', 'warning')
+        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
     body   = request.form.get('body', '').strip()
 
     if body:
