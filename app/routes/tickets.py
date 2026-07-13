@@ -168,15 +168,21 @@ def list_tickets():
 
 
 def _exportar_tickets(tickets, formato):
-    """Genera el fichero de exportación en el formato indicado."""
     import io
     from flask import make_response
 
     cabeceras = ['#', 'Asunto', 'Solicitante', 'Asignado', 'Categoría',
-                 'Estado', 'Prioridad', 'Fecha estado']
+                 'Estado', 'Prioridad', 'Fecha estado', 'Participantes']
 
     filas = []
     for t in tickets:
+        # Obtener nombres de participantes separados por coma
+        participantes = TicketParticipant.query.filter_by(ticket_id=t.ticket_id).all()
+        nombres_participantes = ', '.join(
+            p.user.name for p in participantes if p.user
+        )
+
+        # Agregar fila a la lista de filas
         filas.append([
             t.ticket_id,
             t.title,
@@ -186,8 +192,11 @@ def _exportar_tickets(tickets, formato):
             t.status_label(),
             t.priority_label(),
             t.status_updated_at.strftime('%d/%m/%Y %H:%M') if t.status_updated_at else '-',
+            nombres_participantes or '-',
         ])
 
+    # Exportar según el formato solicitado
+    # CSV
     if formato == 'csv':
         import csv
         buf = io.StringIO()
@@ -199,6 +208,7 @@ def _exportar_tickets(tickets, formato):
         resp.headers['Content-Disposition'] = 'attachment; filename=tickets.csv'
         return resp
 
+    # XLSX
     elif formato == 'xlsx':
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment
@@ -206,16 +216,16 @@ def _exportar_tickets(tickets, formato):
         ws = wb.active
         ws.title = 'Tickets'
 
-        # Cabecera con estilo
+        # Formato de cabeceras
         header_font = Font(bold=True, color='FFFFFF')
         header_fill = PatternFill('solid', fgColor='185FA5')
         for col, cab in enumerate(cabeceras, 1):
             cell = ws.cell(row=1, column=col, value=cab)
-            cell.font   = header_font
-            cell.fill   = header_fill
+            cell.font      = header_font
+            cell.fill      = header_fill
             cell.alignment = Alignment(horizontal='center')
 
-        # Datos
+        # Agregar filas de datos
         for row, fila in enumerate(filas, 2):
             for col, valor in enumerate(fila, 1):
                 ws.cell(row=row, column=col, value=valor)
@@ -223,8 +233,9 @@ def _exportar_tickets(tickets, formato):
         # Ajustar ancho de columnas
         for col in ws.columns:
             max_len = max(len(str(c.value or '')) for c in col)
-            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 50)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 60)
 
+        # Guardar en un buffer y enviar como respuesta
         buf = io.BytesIO()
         wb.save(buf)
         buf.seek(0)
@@ -234,20 +245,23 @@ def _exportar_tickets(tickets, formato):
         resp.headers['Content-Disposition'] = 'attachment; filename=tickets.xlsx'
         return resp
 
+    # TXT
     elif formato == 'txt':
-        # Formato tabla de texto con columnas alineadas
         anchos = [max(len(str(cabeceras[i])),
                       max((len(str(f[i])) for f in filas), default=0))
                   for i in range(len(cabeceras))]
 
+        # Función para generar una fila de texto con alineación
         def fila_txt(valores):
             return '  '.join(str(v).ljust(anchos[i]) for i, v in enumerate(valores))
 
+        # Crear contenido del archivo TXT
         separador = '-' * (sum(anchos) + 2 * len(anchos))
         lineas = [fila_txt(cabeceras), separador]
         for f in filas:
             lineas.append(fila_txt(f))
 
+        # Crear respuesta con el contenido TXT
         contenido = '\n'.join(lineas)
         resp = make_response(contenido)
         resp.headers['Content-Type'] = 'text/plain; charset=utf-8'
