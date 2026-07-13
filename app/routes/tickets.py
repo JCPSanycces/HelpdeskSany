@@ -173,7 +173,7 @@ def _exportar_tickets(tickets, formato):
     from flask import make_response
 
     cabeceras = ['#', 'Asunto', 'Solicitante', 'Asignado', 'Categoría',
-                 'Estado', 'Prioridad', 'Últ. cambio estado']
+                 'Estado', 'Prioridad', 'Fecha estado']
 
     filas = []
     for t in tickets:
