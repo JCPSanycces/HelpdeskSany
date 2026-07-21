@@ -93,9 +93,9 @@ def list_tickets():
         query = query.join(User, Ticket.created_by == User.id)\
             .filter(
                 db.or_(
+                    Ticket.ticket_id.ilike(f'%{search}%'),
                     Ticket.title.ilike(f'%{search}%'),
                     User.name.ilike(f'%{search}%'),
-                    User.email.ilike(f'%{search}%'),
                 )
             )
 
