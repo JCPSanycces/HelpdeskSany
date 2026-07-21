@@ -45,7 +45,7 @@ def list_tickets():
     search     = request.args.get('search', '').strip()
     fecha_mod_ini  = request.args.get('fecha_mod_ini', '').strip()
     fecha_mod_fin  = request.args.get('fecha_mod_fin', '').strip()
-    sort       = request.args.get('sort', 'created_at')
+    sort       = request.args.get('sort', 'ticket_id')
     order      = request.args.get('order', 'desc')
     per_page   = request.args.get('per_page', '25')
     page       = request.args.get('page', 1, type=int)
