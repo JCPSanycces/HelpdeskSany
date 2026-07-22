@@ -1,8 +1,7 @@
 import requests
 import msal
 import re
-from flask import current_app, url_for
-import re
+from flask import current_app
 from app import db
 from app.models.ticket import Ticket
 from app.models.ticket_attachment import TicketAttachment
@@ -31,7 +30,8 @@ def _obtener_token():
 
 def _añadir_participante(ticket_id, user_id):
     existe = TicketParticipant.query.filter_by(
-        ticket_id=ticket_id, user_id=user_id).first()
+        ticket_id=ticket_id, user_id=user_id
+    ).first()
     if not existe:
         db.session.add(TicketParticipant(ticket_id=ticket_id, user_id=user_id))
 
@@ -45,7 +45,13 @@ def _obtener_o_crear_usuario(email, nombre):
     usuario = User.query.filter_by(email=email).first()
     if usuario:
         return usuario
-    usuario = User(name=nombre or email.split('@')[0], email=email, role='user', department='')
+
+    usuario = User(
+        name=nombre or email.split('@')[0],
+        email=email,
+        role='user',
+        department=''
+    )
     # Crear con contraseña por defecto '1234' y forzar cambio en primer inicio
     usuario.set_password('1234')
     usuario.must_change_password = True
@@ -58,17 +64,59 @@ def _obtener_adjuntos_mensaje(headers, mailbox, msg_id):
     """Devuelve la lista de adjuntos (incluye los inline embebidos en el cuerpo)."""
     url = f"https://graph.microsoft.com/v1.0/users/{mailbox}/messages/{msg_id}/attachments"
     resp = requests.get(url, headers=headers)
+
     if resp.status_code != 200:
         current_app.logger.error(f'Error obteniendo adjuntos de {msg_id}: {resp.text}')
         return []
-    return resp.json().get('value', [])
+
+    # Log opcional para depuración
+    try:
+        data = resp.json()
+        current_app.logger.info(
+            f"Respuesta adjuntos Graph para msg_id={msg_id}: "
+            f"{str(data)[:3000]}"
+        )
+        return data.get('value', [])
+    except Exception as e:
+        current_app.logger.error(f'Error interpretando adjuntos de {msg_id}: {e}')
+        return []
+
+
+def _reemplazar_cid_en_html(cuerpo_html, content_id, url_publica):
+    """Reemplaza referencias cid en el HTML del correo."""
+    if not cuerpo_html or not content_id:
+        return cuerpo_html
+
+    # Reemplaza src="cid:xxxx" o src='cid:xxxx'
+    cuerpo_html = re.sub(
+        r'src\s*=\s*[\'"]cid:' + re.escape(content_id) + r'[\'"]',
+        f'src="{url_publica}"',
+        cuerpo_html,
+        flags=re.IGNORECASE
+    )
+
+    # Reemplaza cualquier referencia cid:xxxx suelta
+    cuerpo_html = re.sub(
+        re.escape(f'cid:{content_id}'),
+        url_publica,
+        cuerpo_html,
+        flags=re.IGNORECASE
+    )
+
+    return cuerpo_html
 
 
 def _procesar_adjuntos(headers, mailbox, msg_id, cuerpo_html, ticket_id=None, comment_id=None):
-    """Descarga los adjuntos del correo. Las imágenes inline se insertan en el cuerpo
-    en sustitución del cid:..., el resto se guarda como adjunto del ticket o comentario."""
+    """Descarga los adjuntos del correo.
+
+    Las imágenes inline se insertan en el cuerpo en sustitución del cid:...,
+    el resto se guarda como adjunto del ticket o comentario.
+    """
     adjuntos = _obtener_adjuntos_mensaje(headers, mailbox, msg_id)
     cuerpo_final = cuerpo_html
+
+    # Extraemos todos los CID que aparezcan en el HTML
+    cids_en_html = set(re.findall(r'cid:([^"\'>\s]+)', cuerpo_html or '', flags=re.IGNORECASE))
 
     for adj in adjuntos:
         if adj.get('@odata.type') != '#microsoft.graph.fileAttachment':
@@ -77,7 +125,13 @@ def _procesar_adjuntos(headers, mailbox, msg_id, cuerpo_html, ticket_id=None, co
         nombre = adj.get('name', 'adjunto')
         content_bytes = adj.get('contentBytes')
         is_inline = adj.get('isInline', False)
-        content_id = adj.get('contentId', '')
+        content_id = adj.get('contentId', '') or ''
+
+        # Logueamos información sobre el adjunto para depuración
+        current_app.logger.info(
+            f"Adjunto Graph: name={nombre}, is_inline={is_inline}, content_id={content_id}, "
+            f"has_bytes={bool(content_bytes)}"
+        )
 
         if not content_bytes:
             continue
@@ -86,27 +140,36 @@ def _procesar_adjuntos(headers, mailbox, msg_id, cuerpo_html, ticket_id=None, co
         if not guardado:
             continue
 
+        url_publica = f"/static/{guardado['file_path']}"
+
+        # Si es inline, intentamos sustituir la referencia cid del HTML
         if is_inline and content_id:
-            # Sustituir cid:xxxx por la URL real del fichero guardado en static/
-            url_publica = f"/static/{guardado['file_path']}"
-            patron = re.compile(re.escape(f'cid:{content_id}'), re.IGNORECASE)
-            cuerpo_final = patron.sub(url_publica, cuerpo_final)
-        else:
-            # Adjunto real (documento, o imagen no incrustada): lo asociamos al ticket o comentario
-            if ticket_id:
-                db.session.add(TicketAttachment(
-                    ticket_id=ticket_id,
-                    filename=guardado['filename'],
-                    file_path=guardado['file_path'],
-                    file_type=guardado['file_type'],
-                ))
-            elif comment_id:
-                db.session.add(CommentAttachment(
-                    comment_id=comment_id,
-                    filename=guardado['filename'],
-                    file_path=guardado['file_path'],
-                    file_type=guardado['file_type'],
-                ))
+            current_app.logger.info(f"Procesando inline: {nombre} -> cid:{content_id}")
+            cuerpo_final = _reemplazar_cid_en_html(cuerpo_final, content_id, url_publica)
+
+            # A veces el contentId no coincide exactamente, pero el nombre sí aparece en el HTML
+            # o el correo usa el CID sin algunos caracteres. Probamos también con coincidencias parciales.
+            for cid_html in list(cids_en_html):
+                if cid_html.lower() == content_id.lower():
+                    cuerpo_final = _reemplazar_cid_en_html(cuerpo_final, cid_html, url_publica)
+
+            continue
+
+        # Adjunto real (documento, o imagen no incrustada): lo asociamos al ticket o comentario
+        if ticket_id:
+            db.session.add(TicketAttachment(
+                ticket_id=ticket_id,
+                filename=guardado['filename'],
+                file_path=guardado['file_path'],
+                file_type=guardado['file_type'],
+            ))
+        elif comment_id:
+            db.session.add(CommentAttachment(
+                comment_id=comment_id,
+                filename=guardado['filename'],
+                file_path=guardado['file_path'],
+                file_type=guardado['file_type'],
+            ))
 
     return cuerpo_final
 
@@ -119,12 +182,15 @@ def procesar_correos_nuevos():
     url = (
         f"https://graph.microsoft.com/v1.0/users/{mailbox}/mailFolders/inbox/messages"
         f"?$filter=isRead eq false"
-        f"&$select=id,subject,body,from,conversationId,hasAttachments,receivedDateTime&$top=25"
+        f"&$select=id,subject,body,from,conversationId,hasAttachments,receivedDateTime"
+        f"&$top=25"
     )
 
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        current_app.logger.error(f'Error consultando Graph API: {response.status_code} {response.text}')
+        current_app.logger.error(
+            f'Error consultando Graph API: {response.status_code} {response.text}'
+        )
         return 0
 
     mensajes = response.json().get('value', [])
@@ -149,14 +215,24 @@ def procesar_correos_nuevos():
             continue
 
         cuerpo = msg.get('body', {}).get('content', '')
+        current_app.logger.info(f"HTML del correo (inicio): {cuerpo[:2000]}")
+
         conversation_id = msg.get('conversationId')
         tiene_adjuntos = msg.get('hasAttachments', False)
+
         from_info = msg.get('from', {}).get('emailAddress', {})
         remitente_email = from_info.get('address', '').strip().lower()
         remitente_nombre = from_info.get('name', '')
 
+        # Logueamos información sobre el correo recibido para depuración
+        current_app.logger.info(
+            f"Correo recibido: id={msg_id}, asunto={asunto}, conversationId={conversation_id}, "
+            f"hasAttachments={tiene_adjuntos}, from={remitente_email}"
+        )
+
         if not remitente_email:
             continue
+
         if remitente_email == mailbox.strip().lower():
             _marcar_leido(headers, mailbox, msg_id)
             continue
@@ -181,18 +257,25 @@ def procesar_correos_nuevos():
             ticket_existente = None
             if conversation_id:
                 ticket_existente = Ticket.query.filter_by(
-                    graph_conversation_id=conversation_id).first()
+                    graph_conversation_id=conversation_id
+                ).first()
 
             if ticket_existente:
-                # Crear primero el comentario para tener su id, procesar adjuntos después
-                c = Comment(body=cuerpo, ticket_id=ticket_existente.ticket_id, user_id=remitente.id)
+                # Crear primero el comentario para tener su id
+                c = Comment(
+                    body=cuerpo,
+                    ticket_id=ticket_existente.ticket_id,
+                    user_id=remitente.id
+                )
                 db.session.add(c)
                 db.session.flush()
 
-                if tiene_adjuntos:
-                    cuerpo_procesado = _procesar_adjuntos(
-                        headers, mailbox, msg_id, cuerpo, comment_id=c.id)
-                    c.body = cuerpo_procesado
+                # Procesamos adjuntos y posibles imágenes inline aunque hasAttachments sea False
+                current_app.logger.info(f"Procesando adjuntos del mensaje {msg_id}")
+                cuerpo_procesado = _procesar_adjuntos(
+                    headers, mailbox, msg_id, cuerpo, comment_id=c.id
+                )
+                c.body = cuerpo_procesado
 
                 _añadir_participante(ticket_existente.ticket_id, remitente.id)
                 db.session.commit()
@@ -201,13 +284,16 @@ def procesar_correos_nuevos():
                 enviar_notificacion_comentario(remitente, ticket_existente, c, participantes)
 
                 current_app.logger.info(
-                    f'Comentario añadido al ticket {ticket_existente.ticket_id} desde correo de {remitente_email}')
+                    f'Comentario añadido al ticket {ticket_existente.ticket_id} desde correo de {remitente_email}'
+                )
             else:
                 ticket_id_nuevo = generar_ticket_id()
 
-                if tiene_adjuntos:
-                    cuerpo = _procesar_adjuntos(
-                        headers, mailbox, msg_id, cuerpo, ticket_id=ticket_id_nuevo)
+                # Procesamos adjuntos y posibles imágenes inline aunque hasAttachments sea False
+                current_app.logger.info(f"Procesando adjuntos del mensaje {msg_id}")
+                cuerpo = _procesar_adjuntos(
+                    headers, mailbox, msg_id, cuerpo, ticket_id=ticket_id_nuevo
+                )
 
                 t = Ticket(
                     ticket_id=ticket_id_nuevo,
@@ -224,7 +310,9 @@ def procesar_correos_nuevos():
                 _añadir_participante(t.ticket_id, remitente.id)
                 db.session.commit()
 
-                current_app.logger.info(f'Ticket {t.ticket_id} creado desde correo de {remitente_email}')
+                current_app.logger.info(
+                    f'Ticket {t.ticket_id} creado desde correo de {remitente_email}'
+                )
 
             procesados += 1
 
@@ -243,4 +331,5 @@ def _marcar_leido(headers, mailbox, msg_id):
     resp = requests.patch(marcar_url, headers=headers, json={'isRead': True})
     if resp.status_code not in (200, 202):
         current_app.logger.error(
-            f'No se pudo marcar como leído el correo {msg_id}: {resp.status_code} {resp.text}')
+            f'No se pudo marcar como leído el correo {msg_id}: {resp.status_code} {resp.text}'
+        )
