@@ -700,7 +700,9 @@
 				edit.style.display = 'block';
 				if (!quillEditTicket) {
 					quillEditTicket = crearEditor('editor-edit-ticket');
-					quillEditTicket.root.innerHTML = ticketDescriptionHtml;
+					setTimeout(() => {
+						quillEditTicket.clipboard.dangerouslyPasteHTML(ticketDescriptionHtml || '');
+					}, 0);
 				}
 			} else {
 				edit.style.display = 'none';
@@ -725,7 +727,9 @@
 				edit.style.display = 'block';
 				if (!quillEditComments[commentId]) {
 					const editor = crearEditor('editor-edit-comment-' + commentId);
-					editor.root.innerHTML = commentBodies[commentId];
+					setTimeout(() => {
+						editor.clipboard.dangerouslyPasteHTML(commentBodies[commentId] || '');
+					}, 0);
 					quillEditComments[commentId] = editor;
 
 					document.getElementById('form-edit-comment-' + commentId)
