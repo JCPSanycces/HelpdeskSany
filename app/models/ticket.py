@@ -15,9 +15,9 @@ class Ticket(db.Model):
     category = db.Column(db.String(100), default='')            # Valores: low / medium / high / critical
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow,
-    onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now,
+    onupdate=datetime.now)
     comments = db.relationship('Comment', backref='ticket', lazy='dynamic',
     cascade='all, delete-orphan')
     participantes = db.relationship('TicketParticipant', backref='ticket',

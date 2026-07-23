@@ -8,7 +8,7 @@ class Comment(db.Model):
     body       = db.Column(db.Text, nullable=False)
     ticket_id  = db.Column(db.String(20), db.ForeignKey('tickets.ticket_id'), nullable=False)
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, nullable=True)
 
     author      = db.relationship('User', backref='comments')

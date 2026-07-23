@@ -15,7 +15,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default='user') # admin/agent/user
     department = db.Column(db.String(100), default='')
     active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     # Relaciones con tickets
     tickets_creados = db.relationship('Ticket',

@@ -4,7 +4,7 @@ from datetime import datetime
 
 def generar_ticket_id():
     """Genera el próximo ID de ticket en formato YYYY-NNNNN."""
-    year = datetime.utcnow().year
+    year = datetime.now().year
 
     # Busca o crea el contador para este año
     contador = TicketCounter.query.filter_by(year=year).with_for_update().first()

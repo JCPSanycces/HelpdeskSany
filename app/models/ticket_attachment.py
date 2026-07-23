@@ -9,4 +9,4 @@ class TicketAttachment(db.Model):
     filename   = db.Column(db.String(300), nullable=False)
     file_path  = db.Column(db.String(300), nullable=False)
     file_type  = db.Column(db.String(10), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)

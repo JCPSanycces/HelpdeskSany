@@ -39,7 +39,7 @@ def index():
     recent_tickets = base_query.order_by(Ticket.created_at.desc()).limit(10).all()
 
     # ── Datos para gráficos ──────────────────────────────
-    hoy = datetime.utcnow()
+    hoy = datetime.now()
     meses_labels = []
     meses_abiertos = []
     meses_resueltos = []

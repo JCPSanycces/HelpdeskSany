@@ -9,4 +9,4 @@ class CommentAttachment(db.Model):
     filename   = db.Column(db.String(300), nullable=False)  # nombre original
     file_path  = db.Column(db.String(300), nullable=False)  # ruta relativa a static/
     file_type  = db.Column(db.String(10), nullable=False)   # imagen / documento
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)

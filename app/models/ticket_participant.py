@@ -7,7 +7,7 @@ class TicketParticipant(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     ticket_id = db.Column(db.String(20), db.ForeignKey('tickets.ticket_id'), nullable=False)
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    joined_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    joined_at  = db.Column(db.DateTime, default=datetime.now)
 
     # Evita duplicados
     __table_args__ = (db.UniqueConstraint('ticket_id', 'user_id'),)

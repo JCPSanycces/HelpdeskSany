@@ -643,7 +643,7 @@ def edit_comment(ticket_id, comment_id):
     body = request.form.get('body', '').strip()
     if body:
         c.body = limpiar_html(body)
-        c.updated_at = datetime.utcnow()
+        c.updated_at = datetime.now()
 
     eliminar_ids = request.form.getlist('eliminar_adjuntos')
     for aid in eliminar_ids:
