@@ -150,12 +150,31 @@
 								{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}
 								{% if c.updated_at %} (editado){% endif %}
 							</small>
-							{% if c.user_id == current_user.id or current_user.is_admin() %}
-							<button type="button" class="btn btn-sm btn-link p-0 text-secondary"
-									onclick="toggleCommentEdit({{ c.id }})" title="Editar">
-								<i class="bi bi-pencil"></i>
-							</button>
-							{% endif %}
+							<!-- Botones de edición y eliminación -->
+							<div class="d-flex align-items-center gap-2">
+								<small class='text-muted'>
+									{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}
+									{% if c.updated_at %} (editado){% endif %}
+								</small>
+								<!-- Botón de edición -->
+								{% if c.user_id == current_user.id or current_user.is_admin() %}
+								<button type="button" class="btn btn-sm btn-link p-0 text-secondary"
+										onclick="toggleCommentEdit({{ c.id }})" title="Editar">
+									<i class="bi bi-pencil"></i>
+								</button>
+								{% endif %}
+								<!-- Botón de eliminación -->
+								{% if current_user.is_agent() %}
+								<form method="POST"
+									action="{{ url_for('tickets.delete_comment', ticket_id=ticket.ticket_id, comment_id=c.id) }}"
+									style="display:inline;"
+									onsubmit="return confirm('¿Seguro que quieres borrar este comentario? Esta acción no se puede deshacer.')">
+									<button type="submit" class="btn btn-sm btn-link p-0 text-danger" title="Borrar">
+										<i class="bi bi-trash"></i>
+									</button>
+								</form>
+								{% endif %}
+							</div>
 						</div>
 					</div>
 

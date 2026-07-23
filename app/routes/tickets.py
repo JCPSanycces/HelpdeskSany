@@ -518,6 +518,31 @@ def add_comment(ticket_id):
 
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
+# Ruta para eliminar un comentario
+@tickets_bp.route('/<string:ticket_id>/comment/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def delete_comment(ticket_id, comment_id):
+    c = Comment.query.get_or_404(comment_id)
+
+    if c.ticket_id != ticket_id:
+        flash('Comentario no encontrado.', 'danger')
+        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+    if not current_user.is_agent():
+        flash('No tienes permiso para borrar este comentario.', 'danger')
+        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+    # Eliminar adjuntos físicos del comentario
+    for att in c.attachments.all():
+        eliminar_adjunto_fichero(att.file_path)
+        db.session.delete(att)
+
+    db.session.delete(c)
+    db.session.commit()
+
+    flash('Comentario eliminado correctamente.', 'success')
+    return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
 
 @tickets_bp.route('/<string:ticket_id>/delete', methods=['POST'])
 @login_required
