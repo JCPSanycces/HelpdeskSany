@@ -539,7 +539,7 @@
 
 		// Solo estas etiquetas generan salto de línea. Los DIV de Outlook/Word NO
 		// cuentan como bloque para evitar saltos de línea duplicados por anidación.
-		const BLOCK_TAGS = ['P', 'LI', 'H1', 'H2', 'H3', 'H4', 'TR', 'BLOCKQUOTE'];
+		const BLOCK_TAGS = ['P', 'LI', 'H1', 'H2', 'H3', 'H4', 'BLOCKQUOTE'];
 
 		async function insertarNodo(editor, node, pos) {
 			if (node.nodeType === Node.TEXT_NODE) {
@@ -580,14 +580,10 @@
 				await insertarNodo(editor, child, pos);
 			}
 
-			// Solo añadir salto de línea tras bloques "reales", nunca tras un DIV genérico
 			if (BLOCK_TAGS.includes(node.tagName)) {
-				const ultimoChar = editor.getText(Math.max(0, pos.index - 1), 1);
-				if (ultimoChar !== '\n') {
-					editor.insertText(pos.index, '\n');
-					pos.index += 1;
-				}
+				// No forzar salto de línea aquí; Quill ya gestiona el formato del bloque
 			}
+
 		}
 
 		async function procesarPegadoConImagenes(editor, html) {
@@ -604,30 +600,20 @@
 			editor.setSelection(pos.index);
 		}
 
-		// Listener de pegado: SIEMPRE intercepta y procesa manualmente cuando hay
-		// HTML con imágenes embebidas en base64, sin cortar antes por un item suelto.
+		// Registrar el evento de pegado para manejar imágenes sueltas
+		// y contenido HTML de correos electrónicos.
 		function registrarPegado(editor) {
 			editor.root.addEventListener('paste', function (e) {
 				const clipboardData = e.clipboardData || window.clipboardData;
 				const html = clipboardData.getData('text/html');
 
-				// Caso A: el portapapeles trae HTML con imágenes incrustadas (lo más común
-				// al copiar desde un correo de Outlook/Gmail con texto + imágenes)
-				if (html && html.includes('data:image')) {
-					e.preventDefault();
-					e.stopPropagation();
-					procesarPegadoConImagenes(editor, html);
-					return;
-				}
-
-				// Caso B: el portapapeles trae solo HTML sin imágenes (texto con formato);
-				// dejamos que Quill lo gestione de forma nativa para no perder el formato.
+				// Si hay HTML, dejamos que Quill lo pegue de forma nativa
+				// para conservar el formato original del correo.
 				if (html) {
 					return;
 				}
 
-				// Caso C: el portapapeles trae únicamente una imagen suelta (captura de
-				// pantalla, fichero de imagen copiado), sin HTML de texto alrededor.
+				// Si solo hay una imagen suelta copiada
 				const items = clipboardData.items;
 				for (let item of items) {
 					if (item.type.indexOf('image') === 0) {
@@ -646,6 +632,7 @@
 				}
 			}, true);
 		}
+
 
 		function crearEditor(containerId) {
 			const editor = new Quill('#' + containerId, {
