@@ -493,8 +493,18 @@ def add_comment(ticket_id):
 
     body   = request.form.get('body', '').strip()
 
+    # Determinar si el comentario es interno según el checkbox
+    comentario_interno = request.form.get('comentario_interno') == 'on'
+
     if body:
-        c = Comment(body=limpiar_html(body), ticket_id=ticket_id, user_id=current_user.id)
+        # Guardar el comentario con el campo is_internal según el checkbox
+        c = Comment(
+            body=limpiar_html(body),
+            ticket_id=ticket_id,
+            user_id=current_user.id,
+            is_internal=comentario_interno
+        )
+
         db.session.add(c)
         db.session.flush()
 

@@ -141,10 +141,15 @@
 			<!-- Comentarios -->
 			<h6 class='fw-semibold mb-3'>Comentarios</h6>
 			{% for c in ticket.comments.order_by('created_at') %}
-			<div class='card mb-2'>
+			<div class='card mb-2 {% if c.is_internal %}border-warning{% endif %}'>
 				<div class='card-body py-2'>
 					<div class='d-flex justify-content-between mb-1'>
-						<strong style='font-size:.9rem'>{{ c.author.name }}</strong>
+						<div class="d-flex align-items-center gap-2">
+							<strong style='font-size:.9rem'>{{ c.author.name }}</strong>
+							{% if c.is_internal %}
+								<span class="badge bg-warning text-dark">Interno</span>
+							{% endif %}
+						</div>
 						<div class="d-flex align-items-center gap-2">
 							<small class='text-muted'>
 								{{ c.created_at.strftime('%d/%m/%Y %H:%M') }}
@@ -180,7 +185,9 @@
 
 					<!-- Vista normal del comentario -->
 					<div id="comment-view-{{ c.id }}">
-						<div class='comment-body' style='font-size:.9rem'>{{ c.body | safe }}</div>
+						<div class='comment-body {% if c.is_internal %}bg-warning bg-opacity-10 p-2 rounded{% endif %}' style='font-size:.9rem'>
+							{{ c.body | safe }}
+						</div>
 
 						{% set adjuntos = c.attachments.all() %}
 						{% if adjuntos %}
