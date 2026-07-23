@@ -10,6 +10,7 @@ class Comment(db.Model):
     user_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, nullable=True)
+    is_internal = db.Column(db.Boolean, default=False)
 
     author      = db.relationship('User', backref='comments')
     attachments = db.relationship('CommentAttachment', backref='comment',

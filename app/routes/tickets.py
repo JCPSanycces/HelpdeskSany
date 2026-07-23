@@ -513,8 +513,19 @@ def add_comment(ticket_id):
         _añadir_participante(ticket_id, current_user.id)
         db.session.commit()
 
+        # Determinar si el comentario es interno
+        comentario_interno = request.form.get('comentario_interno') == 'on'
+        # Notificar a los participantes si el comentario no es interno
         participantes = _get_participantes(ticket_id)
-        enviar_notificacion_comentario(current_user, ticket, c, participantes)
+        if not comentario_interno:
+            enviar_notificacion_comentario(current_user, ticket, c, participantes)
+        # Guardar el comentario con el campo is_internal según el checkbox
+        c = Comment(
+            body=limpiar_html(body),
+            ticket_id=ticket_id,
+            user_id=current_user.id,
+            is_internal=comentario_interno
+        )
 
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
