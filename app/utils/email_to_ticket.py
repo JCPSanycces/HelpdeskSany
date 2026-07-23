@@ -262,8 +262,10 @@ def procesar_correos_nuevos():
 
             if ticket_existente:
                 # Crear primero el comentario para tener su id
+                respuesta_nueva = _extraer_respuesta_nueva(cuerpo)
+
                 c = Comment(
-                    body=cuerpo,
+                    body=respuesta_nueva,
                     ticket_id=ticket_existente.ticket_id,
                     user_id=remitente.id
                 )
@@ -273,7 +275,7 @@ def procesar_correos_nuevos():
                 # Procesamos adjuntos y posibles imágenes inline aunque hasAttachments sea False
                 current_app.logger.info(f"Procesando adjuntos del mensaje {msg_id}")
                 cuerpo_procesado = _procesar_adjuntos(
-                    headers, mailbox, msg_id, cuerpo, comment_id=c.id
+                    headers, mailbox, msg_id, respuesta_nueva, comment_id=c.id
                 )
                 c.body = cuerpo_procesado
 
@@ -333,3 +335,34 @@ def _marcar_leido(headers, mailbox, msg_id):
         current_app.logger.error(
             f'No se pudo marcar como leído el correo {msg_id}: {resp.status_code} {resp.text}'
         )
+
+
+def _extraer_respuesta_nueva(html):
+    """Intenta quedarse solo con la respuesta nueva del correo,
+    eliminando el hilo citado y bloques típicos de respuesta/reenvío."""
+    if not html:
+        return ''
+
+    # Quitar bloques citados típicos
+    patrones = [
+        r'(?is)<blockquote[^>]*>.*?</blockquote>',
+        r'(?is)<div[^>]*class=["\']?gmail_quote["\']?[^>]*>.*?</div>',
+        r'(?is)<div[^>]*class=["\']?gmail_extra["\']?[^>]*>.*</div>',
+        r'(?is)<div[^>]*id=["\']?divRplyFwdMsg["\']?[^>]*>.*</div>',
+        r'(?is)<div[^>]*class=["\']?OutlookMessageHeader["\']?[^>]*>.*</div>',
+        r'(?is)<hr[^>]*>.*',  # muchas respuestas separan aquí el hilo anterior
+        r'(?is)-----Mensaje original-----.*',
+        r'(?is)-----Original Message-----.*',
+        r'(?is)El .* escribió:.*',
+        r'(?is)On .* wrote:.*',
+    ]
+
+    for patron in patrones:
+        html = re.sub(patron, '', html)
+
+    # Limpieza final de espacios y saltos
+    html = html.strip()
+    html = re.sub(r'(<p>\s*</p>\s*){2,}', '<p></p>', html, flags=re.IGNORECASE)
+    html = re.sub(r'(<br\s*/?>\s*){3,}', '<br><br>', html, flags=re.IGNORECASE)
+
+    return html
