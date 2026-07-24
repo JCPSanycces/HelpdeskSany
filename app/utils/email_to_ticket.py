@@ -12,10 +12,11 @@ from app.models.user import User
 from app.utils.ticket_id import generar_ticket_id
 from app.utils.uploads import guardar_adjunto_bytes
 from app.utils.email import enviar_notificacion_comentario
+from bs4 import BeautifulSoup
 
 GRAPH_SCOPE = ["https://graph.microsoft.com/.default"]
 
-
+# Función auxiliar para obtener un token de acceso a Microsoft Graph
 def _obtener_token():
     app = msal.ConfidentialClientApplication(
         current_app.config['GRAPH_CLIENT_ID'],
@@ -27,7 +28,7 @@ def _obtener_token():
         raise Exception(f"Error obteniendo token: {result.get('error_description')}")
     return result['access_token']
 
-
+# Funciones auxiliares para manejar participantes de tickets y usuarios
 def _añadir_participante(ticket_id, user_id):
     existe = TicketParticipant.query.filter_by(
         ticket_id=ticket_id, user_id=user_id
@@ -35,11 +36,11 @@ def _añadir_participante(ticket_id, user_id):
     if not existe:
         db.session.add(TicketParticipant(ticket_id=ticket_id, user_id=user_id))
 
-
+# Función auxiliar para obtener los participantes de un ticket
 def _obtener_participantes(ticket_id):
     return TicketParticipant.query.filter_by(ticket_id=ticket_id).all()
 
-
+# Función auxiliar para obtener o crear un usuario a partir de un correo electrónico
 def _obtener_o_crear_usuario(email, nombre):
     email = email.strip().lower()
     usuario = User.query.filter_by(email=email).first()
@@ -59,7 +60,7 @@ def _obtener_o_crear_usuario(email, nombre):
     db.session.flush()
     return usuario
 
-
+# Función auxiliar para obtener los adjuntos de un mensaje de correo
 def _obtener_adjuntos_mensaje(headers, mailbox, msg_id):
     """Devuelve la lista de adjuntos (incluye los inline embebidos en el cuerpo)."""
     url = f"https://graph.microsoft.com/v1.0/users/{mailbox}/messages/{msg_id}/attachments"
@@ -81,7 +82,7 @@ def _obtener_adjuntos_mensaje(headers, mailbox, msg_id):
         current_app.logger.error(f'Error interpretando adjuntos de {msg_id}: {e}')
         return []
 
-
+# Función auxiliar para reemplazar referencias cid en el HTML del correo
 def _reemplazar_cid_en_html(cuerpo_html, content_id, url_publica):
     """Reemplaza referencias cid en el HTML del correo."""
     if not cuerpo_html or not content_id:
@@ -105,7 +106,7 @@ def _reemplazar_cid_en_html(cuerpo_html, content_id, url_publica):
 
     return cuerpo_html
 
-
+# Función para procesar los adjuntos de un correo y asociarlos a un ticket o comentario
 def _procesar_adjuntos(headers, mailbox, msg_id, cuerpo_html, ticket_id=None, comment_id=None):
     """Descarga los adjuntos del correo.
 
@@ -173,7 +174,7 @@ def _procesar_adjuntos(headers, mailbox, msg_id, cuerpo_html, ticket_id=None, co
 
     return cuerpo_final
 
-
+# Función principal para procesar correos nuevos en la bandeja de entrada
 def procesar_correos_nuevos():
     token = _obtener_token()
     mailbox = current_app.config['HELPDESK_MAILBOX']
@@ -233,9 +234,8 @@ def procesar_correos_nuevos():
         if not remitente_email:
             continue
 
-        if remitente_email == mailbox.strip().lower():
-            _marcar_leido(headers, mailbox, msg_id)
-            continue
+        # Marcamos si el mensaje viene del propio buzón del helpdesk
+        es_helpdesk = remitente_email == mailbox.strip().lower()
 
         # --- Ignorar por remitente (configurable) ---
         ignored_senders_cfg = current_app.config.get('IGNORED_EMAIL_SENDERS', '')
@@ -260,9 +260,21 @@ def procesar_correos_nuevos():
                     graph_conversation_id=conversation_id
                 ).first()
 
+            # Si el correo viene del propio helpdesk y no pertenece a un ticket,
+            # lo ignoramos para evitar bucles o ecos de notificaciones.
+            if es_helpdesk and not ticket_existente:
+                _marcar_leido(headers, mailbox, msg_id)
+                continue
+
             if ticket_existente:
-                # Crear primero el comentario para tener su id
                 respuesta_nueva = _extraer_respuesta_nueva(cuerpo)
+
+                if not respuesta_nueva.strip():
+                    current_app.logger.info(
+                        f'Correo {msg_id} descartado: no contiene respuesta nueva utilizable.'
+                    )
+                    _marcar_leido(headers, mailbox, msg_id)
+                    continue
 
                 c = Comment(
                     body=respuesta_nueva,
@@ -272,7 +284,6 @@ def procesar_correos_nuevos():
                 db.session.add(c)
                 db.session.flush()
 
-                # Procesamos adjuntos y posibles imágenes inline aunque hasAttachments sea False
                 current_app.logger.info(f"Procesando adjuntos del mensaje {msg_id}")
                 cuerpo_procesado = _procesar_adjuntos(
                     headers, mailbox, msg_id, respuesta_nueva, comment_id=c.id
@@ -288,6 +299,7 @@ def procesar_correos_nuevos():
                 current_app.logger.info(
                     f'Comentario añadido al ticket {ticket_existente.ticket_id} desde correo de {remitente_email}'
                 )
+
             else:
                 ticket_id_nuevo = generar_ticket_id()
 
@@ -328,6 +340,8 @@ def procesar_correos_nuevos():
     return procesados
 
 
+
+# Función auxiliar para marcar un correo como leído en Microsoft Graph
 def _marcar_leido(headers, mailbox, msg_id):
     marcar_url = f"https://graph.microsoft.com/v1.0/users/{mailbox}/messages/{msg_id}"
     resp = requests.patch(marcar_url, headers=headers, json={'isRead': True})
@@ -336,33 +350,43 @@ def _marcar_leido(headers, mailbox, msg_id):
             f'No se pudo marcar como leído el correo {msg_id}: {resp.status_code} {resp.text}'
         )
 
-
+# Extraer solo la respuesta nueva del correo, eliminando el hilo citado.
 def _extraer_respuesta_nueva(html):
-    """Intenta quedarse solo con la respuesta nueva del correo,
-    eliminando el hilo citado y bloques típicos de respuesta/reenvío."""
+    """Extrae solo la respuesta nueva del correo, manteniendo HTML e imágenes.
+
+    La estrategia es cortar el HTML antes del primer bloque de cita/hilo anterior.
+    """
     if not html:
         return ''
 
-    # Quitar bloques citados típicos
     patrones = [
-        r'(?is)<blockquote[^>]*>.*?</blockquote>',
-        r'(?is)<div[^>]*class=["\']?gmail_quote["\']?[^>]*>.*?</div>',
-        r'(?is)<div[^>]*class=["\']?gmail_extra["\']?[^>]*>.*</div>',
-        r'(?is)<div[^>]*id=["\']?divRplyFwdMsg["\']?[^>]*>.*</div>',
-        r'(?is)<div[^>]*class=["\']?OutlookMessageHeader["\']?[^>]*>.*</div>',
-        r'(?is)<hr[^>]*>.*',  # muchas respuestas separan aquí el hilo anterior
-        r'(?is)-----Mensaje original-----.*',
-        r'(?is)-----Original Message-----.*',
-        r'(?is)El .* escribió:.*',
-        r'(?is)On .* wrote:.*',
+        # Bloques HTML típicos de Outlook / Gmail
+        r'(?is)<blockquote\b',
+        r'(?is)<div[^>]*id=["\']?divRplyFwdMsg["\']?[^>]*>',
+        r'(?is)<div[^>]*class=["\']?gmail_quote["\']?[^>]*>',
+        r'(?is)<div[^>]*class=["\']?gmail_extra["\']?[^>]*>',
+        r'(?is)<div[^>]*class=["\']?OutlookMessageHeader["\']?[^>]*>',
+        r'(?is)<hr[^>]*>',
+        # Cabeceras típicas de Outlook en español/inglés
+        r'(?im)^\s*De:\s.*$',
+        r'(?im)^\s*Enviado el:\s.*$',
+        r'(?im)^\s*Para:\s.*$',
+        r'(?im)^\s*Asunto:\s.*$',
+        r'(?im)^-----Mensaje original-----.*$',
+        r'(?im)^-----Original Message-----.*$',
+        r'(?im)^On .* wrote:.*$',
+        r'(?im)^El .* escribió:.*$',
     ]
 
+    # Buscamos la primera aparición de cualquiera de esos patrones
+    corte = None
     for patron in patrones:
-        html = re.sub(patron, '', html)
+        m = re.search(patron, html)
+        if m:
+            if corte is None or m.start() < corte:
+                corte = m.start()
 
-    # Limpieza final de espacios y saltos
-    html = html.strip()
-    html = re.sub(r'(<p>\s*</p>\s*){2,}', '<p></p>', html, flags=re.IGNORECASE)
-    html = re.sub(r'(<br\s*/?>\s*){3,}', '<br><br>', html, flags=re.IGNORECASE)
+    if corte is not None:
+        html = html[:corte]
 
-    return html
+    return html.strip()
