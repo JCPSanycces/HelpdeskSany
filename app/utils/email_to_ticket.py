@@ -270,6 +270,10 @@ def procesar_correos_nuevos():
                 respuesta_nueva = _extraer_respuesta_nueva(cuerpo)
 
                 if not respuesta_nueva.strip():
+                    # Fallback: al menos guarda el cuerpo completo si no hay patrón
+                    respuesta_nueva = cuerpo
+
+                if not respuesta_nueva.strip():
                     current_app.logger.info(
                         f'Correo {msg_id} descartado: no contiene respuesta nueva utilizable.'
                     )
@@ -359,7 +363,16 @@ def _extraer_respuesta_nueva(html):
     if not html:
         return ''
 
+    html = html.replace('\r\n', '\n').replace('\r', '\n')
+
     patrones = [
+        # Cortar en el bloque de cabecera de respuesta (lo más importante)
+        r'(?is)<[^>]*>\s*De:\s*.*?<\/[^>]*>',
+        r'(?is)^\s*De:\s*.*$',
+        # Variantes que a veces vienen en nodos distintos
+        r'(?is)^\s*Enviado el:\s*.*$',
+        r'(?is)^\s*Para:\s*.*$',
+        r'(?is)^\s*Asunto:\s*.*$',
         # Bloques HTML típicos de Outlook / Gmail
         r'(?is)<blockquote\b',
         r'(?is)<div[^>]*id=["\']?divRplyFwdMsg["\']?[^>]*>',
@@ -381,12 +394,13 @@ def _extraer_respuesta_nueva(html):
     # Buscamos la primera aparición de cualquiera de esos patrones
     corte = None
     for patron in patrones:
-        m = re.search(patron, html)
+        m = re.search(patron, html, flags=0)
         if m:
             if corte is None or m.start() < corte:
                 corte = m.start()
 
     if corte is not None:
-        html = html[:corte]
+        # html = html[:corte]
+        return html[:corte].strip()
 
     return html.strip()
