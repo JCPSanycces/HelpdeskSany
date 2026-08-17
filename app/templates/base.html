@@ -102,12 +102,14 @@
                     <i class='bi bi-speedometer2 me-2'></i>Dashboard
                 </a>
 
-                <a href='{{ url_for("tickets.list_tickets") }}' class='nav-link {% if "tickets" in request.endpoint %}active{% endif %}'>
+                <a href='{{ url_for("tickets.list_tickets") }}'
+                class='nav-link {% if request.endpoint == "tickets.list_tickets" and not request.args.get("status") %}active{% endif %}'>
                     <i class='bi bi-ticket-perforated me-2'></i>Tickets
                 </a>
 
                 {% if current_user.is_agent() %}
-                    <a href='{{ url_for("tickets.list_tickets", status="open") }}' class='nav-link'>
+                    <a href='{{ url_for("tickets.list_tickets", status="open") }}'
+                    class='nav-link {% if request.endpoint == "tickets.list_tickets" and request.args.get("status") == "open" %}active{% endif %}'>
                         <i class='bi bi-clock me-2'></i>Pendientes
                     </a>
                 {% endif %}
