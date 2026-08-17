@@ -60,7 +60,7 @@ def _obtener_o_crear_usuario(email, nombre):
     db.session.flush()
     return usuario
 
-# Función auxiliar para obtener los adjuntos de un mensaje de correo
+# Obtiene los adjuntos del mensaje de correo, incluidas las imágenes inline.
 def _obtener_adjuntos_mensaje(headers, mailbox, msg_id):
     """Devuelve la lista de adjuntos (incluye los inline embebidos en el cuerpo)."""
     url = f"https://graph.microsoft.com/v1.0/users/{mailbox}/messages/{msg_id}/attachments"
@@ -69,20 +69,14 @@ def _obtener_adjuntos_mensaje(headers, mailbox, msg_id):
     if resp.status_code != 200:
         current_app.logger.error(f'Error obteniendo adjuntos de {msg_id}: {resp.text}')
         return []
-
-    # Log opcional para depuración
     try:
         data = resp.json()
-        current_app.logger.info(
-            f"Respuesta adjuntos Graph para msg_id={msg_id}: "
-            f"{str(data)[:3000]}"
-        )
         return data.get('value', [])
     except Exception as e:
         current_app.logger.error(f'Error interpretando adjuntos de {msg_id}: {e}')
         return []
 
-# Función auxiliar para reemplazar referencias cid en el HTML del correo
+# Sustituye las referencias cid: de las imágenes inline por sus URLs públicas.
 def _reemplazar_cid_en_html(cuerpo_html, content_id, url_publica):
     """Reemplaza referencias cid en el HTML del correo."""
     if not cuerpo_html or not content_id:
@@ -106,7 +100,7 @@ def _reemplazar_cid_en_html(cuerpo_html, content_id, url_publica):
 
     return cuerpo_html
 
-# Función para procesar los adjuntos de un correo y asociarlos a un ticket o comentario
+# Descarga y procesa los adjuntos del correo, asociándolos al ticket o comentario.
 def _procesar_adjuntos(headers, mailbox, msg_id, cuerpo_html, ticket_id=None, comment_id=None):
     """Descarga los adjuntos del correo.
 
@@ -128,12 +122,6 @@ def _procesar_adjuntos(headers, mailbox, msg_id, cuerpo_html, ticket_id=None, co
         is_inline = adj.get('isInline', False)
         content_id = adj.get('contentId', '') or ''
 
-        # Logueamos información sobre el adjunto para depuración
-        current_app.logger.info(
-            f"Adjunto Graph: name={nombre}, is_inline={is_inline}, content_id={content_id}, "
-            f"has_bytes={bool(content_bytes)}"
-        )
-
         if not content_bytes:
             continue
 
@@ -145,7 +133,6 @@ def _procesar_adjuntos(headers, mailbox, msg_id, cuerpo_html, ticket_id=None, co
 
         # Si es inline, intentamos sustituir la referencia cid del HTML
         if is_inline and content_id:
-            current_app.logger.info(f"Procesando inline: {nombre} -> cid:{content_id}")
             cuerpo_final = _reemplazar_cid_en_html(cuerpo_final, content_id, url_publica)
 
             # A veces el contentId no coincide exactamente, pero el nombre sí aparece en el HTML
@@ -174,7 +161,7 @@ def _procesar_adjuntos(headers, mailbox, msg_id, cuerpo_html, ticket_id=None, co
 
     return cuerpo_final
 
-# Función principal para procesar correos nuevos en la bandeja de entrada
+# Procesa los correos no leídos de la bandeja de entrada y crea o actualiza tickets.
 def procesar_correos_nuevos():
     token = _obtener_token()
     mailbox = current_app.config['HELPDESK_MAILBOX']
@@ -216,20 +203,11 @@ def procesar_correos_nuevos():
             continue
 
         cuerpo = msg.get('body', {}).get('content', '')
-        current_app.logger.info(f"HTML del correo (inicio): {cuerpo[:2000]}")
 
         conversation_id = msg.get('conversationId')
-        tiene_adjuntos = msg.get('hasAttachments', False)
-
         from_info = msg.get('from', {}).get('emailAddress', {})
         remitente_email = from_info.get('address', '').strip().lower()
         remitente_nombre = from_info.get('name', '')
-
-        # Logueamos información sobre el correo recibido para depuración
-        current_app.logger.info(
-            f"Correo recibido: id={msg_id}, asunto={asunto}, conversationId={conversation_id}, "
-            f"hasAttachments={tiene_adjuntos}, from={remitente_email}"
-        )
 
         if not remitente_email:
             continue
@@ -267,11 +245,8 @@ def procesar_correos_nuevos():
                 continue
 
             if ticket_existente:
-                respuesta_nueva = _extraer_respuesta_nueva(cuerpo)
 
-                if not respuesta_nueva.strip():
-                    # Fallback: al menos guarda el cuerpo completo si no hay patrón
-                    respuesta_nueva = cuerpo
+                respuesta_nueva = _extraer_respuesta_nueva(cuerpo)
 
                 if not respuesta_nueva.strip():
                     current_app.logger.info(
@@ -287,8 +262,6 @@ def procesar_correos_nuevos():
                 )
                 db.session.add(c)
                 db.session.flush()
-
-                current_app.logger.info(f"Procesando adjuntos del mensaje {msg_id}")
                 cuerpo_procesado = _procesar_adjuntos(
                     headers, mailbox, msg_id, respuesta_nueva, comment_id=c.id
                 )
@@ -307,8 +280,7 @@ def procesar_correos_nuevos():
             else:
                 ticket_id_nuevo = generar_ticket_id()
 
-                # Procesamos adjuntos y posibles imágenes inline aunque hasAttachments sea False
-                current_app.logger.info(f"Procesando adjuntos del mensaje {msg_id}")
+                # Procesa también las imágenes inline aunque el mensaje no indique adjuntos.
                 cuerpo = _procesar_adjuntos(
                     headers, mailbox, msg_id, cuerpo, ticket_id=ticket_id_nuevo
                 )
@@ -345,7 +317,7 @@ def procesar_correos_nuevos():
 
 
 
-# Función auxiliar para marcar un correo como leído en Microsoft Graph
+# Marca un correo como leído en Microsoft Graph.
 def _marcar_leido(headers, mailbox, msg_id):
     marcar_url = f"https://graph.microsoft.com/v1.0/users/{mailbox}/messages/{msg_id}"
     resp = requests.patch(marcar_url, headers=headers, json={'isRead': True})
@@ -354,53 +326,56 @@ def _marcar_leido(headers, mailbox, msg_id):
             f'No se pudo marcar como leído el correo {msg_id}: {resp.status_code} {resp.text}'
         )
 
-# Extraer solo la respuesta nueva del correo, eliminando el hilo citado.
+# Extrae únicamente la respuesta nueva del correo, eliminando el hilo citado.
 def _extraer_respuesta_nueva(html):
-    """Extrae solo la respuesta nueva del correo, manteniendo HTML e imágenes.
+    """Extrae la respuesta nueva y elimina el hilo anterior de Outlook.
 
-    La estrategia es cortar el HTML antes del primer bloque de cita/hilo anterior.
+    Outlook suele insertar el mensaje anterior después de una cabecera
+    visual separada mediante una línea superior. Se localiza esa cabecera
+    buscando "De:" o "From:" y el DIV que contiene el estilo "border-top".
+    Todo el contenido a partir de ese punto se elimina, conservando la
+    respuesta nueva, su firma y las imágenes inline.
     """
+
     if not html:
         return ''
 
-    html = html.replace('\r\n', '\n').replace('\r', '\n')
+    soup = BeautifulSoup(html, 'html.parser')
+    cabecera_hilo = None
 
-    patrones = [
-        # Cortar en el bloque de cabecera de respuesta (lo más importante)
-        r'(?is)<[^>]*>\s*De:\s*.*?<\/[^>]*>',
-        r'(?is)^\s*De:\s*.*$',
-        # Variantes que a veces vienen en nodos distintos
-        r'(?is)^\s*Enviado el:\s*.*$',
-        r'(?is)^\s*Para:\s*.*$',
-        r'(?is)^\s*Asunto:\s*.*$',
-        # Bloques HTML típicos de Outlook / Gmail
-        r'(?is)<blockquote\b',
-        r'(?is)<div[^>]*id=["\']?divRplyFwdMsg["\']?[^>]*>',
-        r'(?is)<div[^>]*class=["\']?gmail_quote["\']?[^>]*>',
-        r'(?is)<div[^>]*class=["\']?gmail_extra["\']?[^>]*>',
-        r'(?is)<div[^>]*class=["\']?OutlookMessageHeader["\']?[^>]*>',
-        r'(?is)<hr[^>]*>',
-        # Cabeceras típicas de Outlook en español/inglés
-        r'(?im)^\s*De:\s.*$',
-        r'(?im)^\s*Enviado el:\s.*$',
-        r'(?im)^\s*Para:\s.*$',
-        r'(?im)^\s*Asunto:\s.*$',
-        r'(?im)^-----Mensaje original-----.*$',
-        r'(?im)^-----Original Message-----.*$',
-        r'(?im)^On .* wrote:.*$',
-        r'(?im)^El .* escribió:.*$',
-    ]
+    # Buscar la cabecera "De:" / "From:" que marca el inicio
+    # del correo anterior.
+    for elemento in soup.find_all(string=True):
+        if elemento.strip() in ('De:', 'From:'):
+            padre = elemento.parent
 
-    # Buscamos la primera aparición de cualquiera de esos patrones
-    corte = None
-    for patron in patrones:
-        m = re.search(patron, html, flags=0)
-        if m:
-            if corte is None or m.start() < corte:
-                corte = m.start()
+            # Subimos por la estructura HTML hasta localizar el DIV
+            # que contiene la línea horizontal de separación del hilo.
+            for _ in range(10):
+                if padre is None:
+                    break
 
-    if corte is not None:
-        # html = html[:corte]
-        return html[:corte].strip()
+                estilo = padre.get('style', '')
 
-    return html.strip()
+                if (
+                    padre.name == 'div'
+                    and 'border-top' in estilo.lower()
+                ):
+                    cabecera_hilo = padre
+                    break
+
+                padre = padre.parent
+
+        if cabecera_hilo:
+            break
+
+    if cabecera_hilo:
+        # Eliminar todo lo que aparece después de la cabecera
+        # del mensaje anterior.
+        for elemento in list(cabecera_hilo.find_all_next()):
+            elemento.decompose()
+
+        # Eliminar también la propia cabecera del mensaje anterior.
+        cabecera_hilo.decompose()
+
+    return str(soup).strip()
