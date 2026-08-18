@@ -110,7 +110,7 @@
                 {% if current_user.is_agent() %}
                     <a href='{{ url_for("tickets.list_tickets", status="open") }}'
                     class='nav-link {% if request.endpoint == "tickets.list_tickets" and request.args.get("status") == "open" %}active{% endif %}'>
-                        <i class='bi bi-clock me-2'></i>Pendientes
+                        <i class='bi bi-clock me-2'></i>Abiertos
                     </a>
                 {% endif %}
 
