@@ -36,6 +36,9 @@ class Ticket(db.Model):
     # Fecha de actualización del estado del ticket
     status_updated_at = db.Column(db.DateTime, nullable=True)
 
+    # ID del mensaje original de correo electrónico que generó el ticket
+    source_message_id = db.Column(db.String(500), nullable=True)
+
     STATUS_LABELS = {
     'open': 'Abierto',
     'in_progress': 'En progreso',

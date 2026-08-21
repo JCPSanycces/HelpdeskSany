@@ -170,7 +170,7 @@ def procesar_correos_nuevos():
     url = (
         f"https://graph.microsoft.com/v1.0/users/{mailbox}/mailFolders/inbox/messages"
         f"?$filter=isRead eq false"
-        f"&$select=id,subject,body,from,conversationId,hasAttachments,receivedDateTime"
+        f"&$select=id,subject,body,from,conversationId,hasAttachments,receivedDateTime,internetMessageId"
         f"&$top=25"
     )
 
@@ -187,6 +187,7 @@ def procesar_correos_nuevos():
     for msg in mensajes:
         msg_id = msg['id']
         asunto = msg.get('subject') or '(Sin asunto)'
+        internet_msg_id    = msg.get('internetMessageId', '') or ''
 
         # --- Ignorar por asunto (configurable) ---
         ignored_cfg = current_app.config.get('IGNORED_EMAIL_SUBJECTS', '')
@@ -219,14 +220,9 @@ def procesar_correos_nuevos():
         ignored_senders_cfg = current_app.config.get('IGNORED_EMAIL_SENDERS', '')
         if ignored_senders_cfg:
             send_parts = [p.strip().lower() for p in re.split(r'[;,|\n]+', ignored_senders_cfg) if p.strip()]
-            sender_lower = remitente_email.lower()
-            skip_sender = False
-            for part in send_parts:
-                if part and part in sender_lower:
-                    _marcar_leido(headers, mailbox, msg_id)
-                    skip_sender = True
-                    break
+            skip_sender = any(p and p in remitente_email for p in send_parts)
             if skip_sender:
+                _marcar_leido(headers, mailbox, msg_id)
                 continue
 
         try:
@@ -245,12 +241,25 @@ def procesar_correos_nuevos():
                 continue
 
             if ticket_existente:
+                # ── COMPROBACIÓN ANTI-DUPLICADO ──────────────────────────
+                # Si el internetMessageId de este correo es el mismo que
+                # generó el ticket (source_message_id), es una copia del
+                # mensaje original que llegó por CC/BCC y no una respuesta.
+                # Lo marcamos como leído y lo ignoramos.
+                if (internet_msg_id and ticket_existente.source_message_id and
+                        internet_msg_id.strip() == ticket_existente.source_message_id.strip()):
+                    current_app.logger.info(
+                        f'Correo {msg_id} ignorado: es copia del mensaje '
+                        f'que creó el ticket {ticket_existente.ticket_id}.')
+                    _marcar_leido(headers, mailbox, msg_id)
+                    continue
 
+                # Es una respuesta real: extraer solo la parte nueva
                 respuesta_nueva = _extraer_respuesta_nueva(cuerpo)
 
                 if not respuesta_nueva.strip():
                     current_app.logger.info(
-                        f'Correo {msg_id} descartado: no contiene respuesta nueva utilizable.'
+                        f'Correo {msg_id} descartado: respuesta vacía tras limpiar hilo.'
                     )
                     _marcar_leido(headers, mailbox, msg_id)
                     continue
@@ -294,6 +303,8 @@ def procesar_correos_nuevos():
                     created_by=remitente.id,
                     assigned_to=None,
                     graph_conversation_id=conversation_id,
+                    # Guardamos el ID del mensaje original para detectar copias
+                    source_message_id=internet_msg_id,
                 )
                 db.session.add(t)
                 db.session.flush()
@@ -319,8 +330,8 @@ def procesar_correos_nuevos():
 
 # Marca un correo como leído en Microsoft Graph.
 def _marcar_leido(headers, mailbox, msg_id):
-    marcar_url = f"https://graph.microsoft.com/v1.0/users/{mailbox}/messages/{msg_id}"
-    resp = requests.patch(marcar_url, headers=headers, json={'isRead': True})
+    url  = f"https://graph.microsoft.com/v1.0/users/{mailbox}/messages/{msg_id}"
+    resp = requests.patch(url, headers=headers, json={'isRead': True})
     if resp.status_code not in (200, 202):
         current_app.logger.error(
             f'No se pudo marcar como leído el correo {msg_id}: {resp.status_code} {resp.text}'
