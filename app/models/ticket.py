@@ -34,7 +34,7 @@ class Ticket(db.Model):
                               lazy='dynamic', cascade='all, delete-orphan')
     
     # Fecha de actualización del estado del ticket
-    status_updated_at = db.Column(db.DateTime, nullable=True)
+    status_updated_at = db.Column(db.DateTime, default=datetime.now, nullable=True)
 
     # ID del mensaje original de correo electrónico que generó el ticket
     source_message_id = db.Column(db.String(500), nullable=True)
