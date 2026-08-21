@@ -19,6 +19,10 @@ from datetime import datetime
 from flask import session
 import pytz
 from app.utils.fechas import ahora_espana
+import base64
+import re
+from bs4 import BeautifulSoup
+from app.utils.uploads import guardar_adjunto_bytes
 
 tickets_bp = Blueprint('tickets', __name__)
 
@@ -508,6 +512,7 @@ def add_comment(ticket_id):
         db.session.add(c)
         db.session.flush()
 
+        # Guardar adjuntos subidos manualmente
         ficheros = request.files.getlist('adjuntos')
         for file in ficheros:
             resultado = guardar_adjunto(file)
@@ -523,19 +528,10 @@ def add_comment(ticket_id):
         _añadir_participante(ticket_id, current_user.id)
         db.session.commit()
 
-        # Determinar si el comentario es interno
-        comentario_interno = request.form.get('comentario_interno') == 'on'
         # Notificar a los participantes si el comentario no es interno
         participantes = _get_participantes(ticket_id)
         if not comentario_interno:
             enviar_notificacion_comentario(current_user, ticket, c, participantes)
-        # Guardar el comentario con el campo is_internal según el checkbox
-        c = Comment(
-            body=limpiar_html(body),
-            ticket_id=ticket_id,
-            user_id=current_user.id,
-            is_internal=comentario_interno
-        )
 
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
