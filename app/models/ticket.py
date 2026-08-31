@@ -13,6 +13,8 @@ class Ticket(db.Model):
     status = db.Column(db.String(30), default='open')
     priority = db.Column(db.String(20), default='medium')       # Valores: open / in_progress / pending / resolved / closed
     category = db.Column(db.String(100), default='')            # Valores: low / medium / high / critical
+    # Tipo del ticket
+    tipo = db.Column(db.String(20), default='Incidencia', nullable=False)  # Valores: Incidencia / Proyecto / Solicitud
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)

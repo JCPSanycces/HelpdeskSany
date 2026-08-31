@@ -406,6 +406,15 @@
 					{% endif %}
 				</div>
 
+				<div class="mb-3">
+				<label class="form-label">Tipo de ticket</label>
+				<select name="tipo" class="form-select">
+					{% for val, lbl in [('Incidencia','Incidencia'),('Proyecto','Proyecto'),('Solicitud','Solicitud')] %}
+					<option value="{{ val }}" {% if ticket.tipo==val %}selected{% endif %}>{{ lbl }}</option>
+					{% endfor %}
+				</select>
+				</div>
+
 				<button type="submit" class="btn btn-primary w-100">Guardar cambios</button>
 			</form>
 			</div>

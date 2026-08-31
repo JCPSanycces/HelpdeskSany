@@ -128,6 +128,19 @@
         </select>
       </div>
 
+      <!-- Tipo de ticket -->
+      {% if current_user.is_agent() %}
+      <div class="col-auto">
+        <label class="form-label mb-1" style="font-size:.85rem">Tipo</label>
+        <select name="tipo" class="form-select form-select-sm">
+          <option value="" {% if not tipo %}selected{% endif %}>Todos</option>
+          <option value="Incidencia" {% if tipo=='Incidencia' %}selected{% endif %}>Incidencia</option>
+          <option value="Proyecto"   {% if tipo=='Proyecto' %}selected{% endif %}>Proyecto</option>
+          <option value="Solicitud"  {% if tipo=='Solicitud' %}selected{% endif %}>Solicitud</option>
+        </select>
+      </div>
+      {% endif %}
+
       <!-- Asignado -->
       <div class="col-auto">
         <label class="form-label mb-1" style="font-size:.85rem">Asignado a</label>
@@ -294,6 +307,16 @@
             </span>
             <div class="resizer"></div>
           </th>
+          {% if current_user.is_agent() %}
+          <th style="width:100px">
+            <span class="th-content">
+              <a href="{{ sort_url('tipo') }}" class="text-decoration-none text-dark">
+                Tipo {{ sort_icon('tipo') }}
+              </a>
+            </span>
+            <div class="resizer"></div>
+          </th>
+          {% endif %}
           <th style="width:100px">
             <span class="th-content">
               <a href="{{ sort_url('status_updated_at') }}" class="text-decoration-none text-dark">
@@ -314,20 +337,23 @@
         {% for t in tickets %}
         <tr onclick="location='{{ url_for('tickets.detail', ticket_id=t.ticket_id) }}'"
             style="cursor:pointer">
-          <td class="text-muted" style="font-size:.85rem">{{ t.ticket_id }}</td>
-          <td>{{ t.title }}</td>
-          <td>{{ t.solicitante.name if t.solicitante else '-' }}</td>
-          <td>
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}" style="font-size:.85rem">{{ t.ticket_id }}</td>
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}">{{ t.title }}</td>
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}">{{ t.solicitante.name if t.solicitante else '-' }}</td>
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}">
             {% if t.agente %}
               {{ t.agente.name }}
             {% else %}
               <span class="text-muted">Sin asignar</span>
             {% endif %}
           </td>
-          <td>{{ t.category or '-' }}</td>
-          <td><span class="badge badge-{{ t.status }}">{{ t.status_label() }}</span></td>
-          <td>{{ t.priority_label() }}</td>
-          <td class="text-muted" style="font-size:.85rem">
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}">{{ t.category or '-' }}</td>
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}"><span class="badge badge-{{ t.status }}">{{ t.status_label() }}</span></td>
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}">{{ t.priority_label() }}</td>
+          {% if current_user.is_agent() %}
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}">{{ t.tipo or '-' }}</td>
+          {% endif %}
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}" style="font-size:.85rem">
             {% if t.status_updated_at %}
               {{ t.status_updated_at.strftime('%d/%m/%Y %H:%M') }}
             {% else %}
@@ -335,7 +361,7 @@
             {% endif %}
           </td>
           {% if current_user.is_agent() %}
-          <td onclick="event.stopPropagation()">
+          <td class="{% if t.tipo == 'Incidencia' %}row-incidencia{% elif t.tipo == 'Proyecto' %}row-proyecto{% elif t.tipo == 'Solicitud' %}row-solicitud{% endif %}" onclick="event.stopPropagation()">
             <form method="POST"
                   action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
                   onsubmit="return confirm('¿Eliminar el ticket {{ t.ticket_id }}?')">

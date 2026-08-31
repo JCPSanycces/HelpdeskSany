@@ -49,6 +49,18 @@
 								</select>
 							</div>
 							{% endif %}
+
+              {% if current_user.is_agent() %}
+							<div class='col-md-4'>
+								<label class='form-label fw-semibold'>Tipo de ticket</label>
+                <select name="tipo" class="form-select">
+                  <option value="Incidencia">Incidencia</option>
+                  <option value="Proyecto">Proyecto</option>
+                  <option value="Solicitud">Solicitud</option>
+                </select>
+              </div>
+              {% endif %}
+
 						</div>
 
 						<div class='mb-3'>

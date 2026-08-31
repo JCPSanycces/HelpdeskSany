@@ -46,6 +46,7 @@ def list_tickets():
     priority   = request.args.get('priority', '')
     category   = request.args.get('category', '')
     assigned   = request.args.get('assigned', '')
+    tipo       = request.args.get('tipo', '')
     search     = request.args.get('search', '').strip()
     fecha_mod_ini  = request.args.get('fecha_mod_ini', '').strip()
     fecha_mod_fin  = request.args.get('fecha_mod_fin', '').strip()
@@ -73,6 +74,8 @@ def list_tickets():
         query = query.filter_by(priority=priority)
     if category:
         query = query.filter_by(category=category)
+    if current_user.is_agent() and tipo:
+        query = query.filter_by(tipo=tipo)
     if assigned == 'none':
         query = query.filter(Ticket.assigned_to == None)
     elif assigned:
@@ -160,6 +163,7 @@ def list_tickets():
         status=status,
         priority=priority,
         category=category,
+        tipo=tipo,
         assigned=assigned,
         search=search,
         fecha_mod_ini=fecha_mod_ini,
@@ -175,7 +179,7 @@ def _exportar_tickets(tickets, formato):
     import io
     from flask import make_response
 
-    cabeceras = ['#', 'Asunto', 'Solicitante', 'Asignado', 'Categoría',
+    cabeceras = ['#', 'Asunto', 'Solicitante', 'Asignado', 'Categoría', 'Tipo',
                  'Estado', 'Prioridad', 'Fecha estado', 'Participantes']
 
     filas = []
@@ -193,6 +197,7 @@ def _exportar_tickets(tickets, formato):
             t.solicitante.name if t.solicitante else '-',
             t.agente.name if t.agente else 'Sin asignar',
             t.category or '-',
+            t.tipo or 'Incidencia',
             t.status_label(),
             t.priority_label(),
             t.status_updated_at.strftime('%d/%m/%Y %H:%M') if t.status_updated_at else '-',
@@ -280,6 +285,10 @@ def new_ticket():
         User.role.in_(['admin', 'agent'])).filter_by(active=True).all()
     todos_usuarios = User.query.filter_by(active=True).order_by(User.name).all()
 
+    tipo = 'Incidencia'
+    if current_user.is_agent():
+        tipo = request.form.get('tipo', 'Incidencia') or 'Incidencia'
+
     if request.method == 'POST':
         assigned_id = request.form.get('assigned_to') or None
         t = Ticket(
@@ -288,6 +297,7 @@ def new_ticket():
             description=limpiar_html(request.form['description']),
             priority=request.form.get('priority', 'medium'),
             category=request.form.get('category', ''),
+            tipo=tipo,
             created_by=current_user.id,
             assigned_to=assigned_id,
         )
@@ -414,6 +424,7 @@ def update_ticket(ticket_id):
     ticket.priority    = request.form.get('priority', ticket.priority)
     ticket.assigned_to = nuevo_agente_id
     ticket.category    = request.form.get('category', ticket.category)
+    ticket.tipo = request.form.get('tipo', ticket.tipo) or 'Incidencia'
 
     ids_seleccionados = set(
         int(i) for i in request.form.getlist('participantes_ids')

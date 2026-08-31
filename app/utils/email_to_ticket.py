@@ -300,6 +300,7 @@ def procesar_correos_nuevos():
                     description=cuerpo,
                     priority='medium',
                     category='SAGE X3',
+                    tipo='Incidencia',
                     created_by=remitente.id,
                     assigned_to=None,
                     graph_conversation_id=conversation_id,
