@@ -57,7 +57,7 @@
 							<i class="bi bi-arrow-left"></i> Volver
 						</a>
 
-						{% if current_user.is_admin() %}
+						{% if current_user.is_agent() %}
 						<form method="POST"
 							action="{{ url_for('tickets.delete_ticket', ticket_id=ticket.ticket_id) }}"
 							onsubmit="return confirm('¿Eliminar el ticket {{ ticket.ticket_id }}? Esta acción no se puede deshacer.')">

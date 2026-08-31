@@ -564,7 +564,7 @@ def delete_comment(ticket_id, comment_id):
 @tickets_bp.route('/<string:ticket_id>/delete', methods=['POST'])
 @login_required
 def delete_ticket(ticket_id):
-    if not current_user.is_admin():
+    if not current_user.is_agent():
         flash('No tienes permiso para eliminar tickets.', 'danger')
         return redirect(url_for('tickets.list_tickets'))
 

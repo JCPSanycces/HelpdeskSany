@@ -334,7 +334,7 @@
               <span class="text-muted">—</span>
             {% endif %}
           </td>
-          {% if current_user.is_admin() %}
+          {% if current_user.is_agent() %}
           <td onclick="event.stopPropagation()">
             <form method="POST"
                   action="{{ url_for('tickets.delete_ticket', ticket_id=t.ticket_id) }}"
