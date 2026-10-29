@@ -1,7 +1,11 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.models.user import User
+import secrets
+import string
+from flask_mail import Message
+from app import mail
 
 # Blueprint para usuarios
 users_bp = Blueprint('users', __name__)
@@ -204,3 +208,47 @@ def profile():
         return redirect(url_for('users.profile'))
 
     return render_template('users/profile.html', u=u)
+
+# resetear contraseña de usuario (solo admin)
+@users_bp.route('/<int:user_id>/reset-password', methods=['POST'])
+@login_required
+@admin_required
+def reset_user_password(user_id):
+    u = User.query.get_or_404(user_id)
+
+    if u.id == current_user.id:
+        flash('No puedes resetear tu propia contraseña desde aquí.', 'warning')
+        return redirect(url_for('users.list_users'))
+
+    # Generar contraseña temporal segura
+    alphabet = string.ascii_letters + string.digits + '!@#$%*?'
+    temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+
+    # Guardar la nueva contraseña y forzar cambio
+    u.set_password(temp_password)
+    u.must_change_password = True
+    db.session.commit()
+
+    # Enviar correo con la contraseña temporal
+    try:
+        msg = Message(
+            subject='[HelpDesk] Restablecimiento de contraseña',
+            recipients=[u.email]
+        )
+        msg.html = f"""
+        <p>Hola <strong>{u.name}</strong>,</p>
+        <p>Un administrador ha restablecido tu contraseña en el HelpDesk.</p>
+        <p>Tu contraseña temporal es:</p>
+        <p style="font-size:18px; font-weight:bold; background:#f5f5f5; padding:10px; display:inline-block;">
+            {temp_password}
+        </p>
+        <p>Cuando inicies sesión con esta contraseña, se te pedirá que la cambies inmediatamente.</p>
+        <p>Si no esperabas este correo, contacta con el departamento de IT.</p>
+        """
+        mail.send(msg)
+        flash(f'Contraseña de {u.name} restablecida y enviada por email.', 'success')
+    except Exception as e:
+        current_app.logger.error(f'Error enviando email de reset a {u.email}: {e}')
+        flash(f'Contraseña de {u.name} restablecida, pero no se pudo enviar el email.', 'warning')
+
+    return redirect(url_for('users.list_users'))

@@ -117,7 +117,8 @@
                 <i class="bi bi-pencil"></i>
               </a>
 
-              {% if u.id != current_user.id %}
+              {% if u.id != current_user.id and current_user.is_admin() %}
+              <!--Botón para activar/desactivar usuario-->
               <form method="POST"
                     action="{{ url_for('users.toggle_user', user_id=u.id) }}">
                 <button type="submit"
@@ -126,7 +127,7 @@
                   <i class="bi bi-{% if u.active %}pause{% else %}play{% endif %}"></i>
                 </button>
               </form>
-
+              <!--Botón para eliminar usuario-->
               <form method="POST"
                     action="{{ url_for('users.delete_user', user_id=u.id) }}"
                     onsubmit="return confirm('¿Seguro que quieres eliminar a {{ u.name }}? Esta acción no se puede deshacer.')">
@@ -134,6 +135,16 @@
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
+              <!--Botón para restablecer contraseña-->
+              <form method="POST"
+                    action="{{ url_for('users.reset_user_password', user_id=u.id) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('¿Restablecer la contraseña de {{ u.name }}? Se generará una contraseña temporal y se enviará por email.')">
+                  <button type="submit" class="btn btn-sm btn-outline-warning">
+                      <i class="bi bi-key"></i> Reset contraseña
+                  </button>
+              </form>
+
               {% endif %}
             </div>
           </td>
