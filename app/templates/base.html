@@ -111,23 +111,27 @@
             </div>
 
             <nav class='nav flex-column p-2 flex-grow-1'>
-                <a href='{{ url_for("dashboard.index") }}' class='nav-link {% if request.endpoint=="dashboard.index" %}active{% endif %}'>
-                    <i class='bi bi-speedometer2 me-2'></i>Dashboard
-                </a>
+                {% if current_user.is_authenticated %}
+                    <a href='{{ url_for("dashboard.index") }}' class='nav-link {% if request.endpoint=="dashboard.index" %}active{% endif %}'>
+                        <i class='bi bi-speedometer2 me-2'></i>Dashboard
+                    </a>
+                {% endif %}
 
-                <a href='{{ url_for("tickets.list_tickets") }}'
-                class='nav-link {% if request.endpoint == "tickets.list_tickets" and not request.args.get("status") %}active{% endif %}'>
-                    <i class='bi bi-ticket-perforated me-2'></i>Tickets
-                </a>
+                {% if current_user.is_authenticated %}
+                    <a href='{{ url_for("tickets.list_tickets") }}'
+                    class='nav-link {% if request.endpoint == "tickets.list_tickets" and not request.args.get("status") %}active{% endif %}'>
+                        <i class='bi bi-ticket-perforated me-2'></i>Tickets
+                    </a>
+                {% endif %}
 
-                {% if current_user.is_agent() %}
+                {% if current_user.is_authenticated and current_user.is_agent() %}
                     <a href='{{ url_for("tickets.list_tickets", status="open") }}'
                     class='nav-link {% if request.endpoint == "tickets.list_tickets" and request.args.get("status") == "open" %}active{% endif %}'>
                         <i class='bi bi-clock me-2'></i>Abiertos
                     </a>
                 {% endif %}
 
-                {% if current_user.is_admin() %}
+                {% if current_user.is_authenticated and current_user.is_admin() %}
                     <hr class='border-secondary my-1'>
                     <a href='{{ url_for("users.list_users") }}' class='nav-link {% if "users" in request.endpoint %}active{% endif %}'>
                         <i class='bi bi-people me-2'></i>Usuarios

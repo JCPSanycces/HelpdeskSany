@@ -20,6 +20,7 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
+    PASSWORD_RESET_TOKEN_EXPIRES = int(os.environ.get('PASSWORD_RESET_TOKEN_EXPIRES', 3600))
 
     # Configuración de Microsoft Graph API para recepción de correos y creación de tickets
     GRAPH_TENANT_ID     = os.environ.get('GRAPH_TENANT_ID')

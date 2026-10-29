@@ -32,7 +32,7 @@
 						</div>
 
 						<div class='mb-3'>
-							<label class='form-label'>Contrasena</label>
+							<label class='form-label'>Contraseña</label>
 							<input type='password' name='password' class='form-control' required>
 						</div>
 
@@ -42,6 +42,10 @@
 						</div>
 
 						<button type='submit' class='btn btn-primary w-100'>Entrar</button>
+
+						<div class="mt-3">
+							<a href="{{ url_for('auth.reset_password_request') }}">Restablecer contraseña</a>
+						</div>
 					</form>
 				</div>
 			</div>
