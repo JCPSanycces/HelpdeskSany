@@ -13,11 +13,13 @@
             <input type="text" name="name" class="form-control"
                    value="{{ u.name }}" required>
           </div>
+
           <div class="mb-3">
             <label class="form-label fw-semibold">Email *</label>
             <input type="email" name="email" class="form-control"
                    value="{{ u.email }}" required>
           </div>
+
           <div class="mb-3">
             <label class="form-label text-muted" style="font-size:.85rem">Contraseña</label>
             <div>
@@ -28,12 +30,24 @@
               {% endif %}
             </div>
           </div>
+
           <div class="mb-3">
             <label class="form-label fw-semibold">Nueva contraseña</label>
-            <input type="password" name="password" class="form-control"
-                   placeholder="Dejar en blanco para no cambiarla">
+            <div class="password-wrapper">
+              <input type="password" id="edit_password" name="password"
+                     class="form-control pe-5"
+                     placeholder="Dejar en blanco para no cambiarla">
+              <button type="button"
+                      class="password-toggle"
+                      onclick="togglePassword('edit_password', this)"
+                      tabindex="-1"
+                      aria-label="Mostrar u ocultar contraseña">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
             <div class="form-text">Solo rellena este campo si quieres cambiar la contraseña.</div>
           </div>
+
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label fw-semibold">Rol</label>
@@ -50,6 +64,7 @@
                      placeholder="Ej: Contabilidad, IT...">
             </div>
           </div>
+
           <div class="mt-4 d-flex gap-2">
             <button type="submit" class="btn btn-primary">Guardar cambios</button>
             <a href="{{ url_for('users.list_users') }}" class="btn btn-secondary">Cancelar</a>
@@ -59,5 +74,4 @@
     </div>
   </div>
 </div>
-
 {% endblock %}

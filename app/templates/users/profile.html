@@ -57,18 +57,42 @@
             Deja estos campos en blanco si no quieres cambiar la contraseña.
           </div>
 
+          {# Mostrar/ocultar contraseña: cada input necesita un id único (lo usa
+             togglePassword), el contenedor .password-wrapper y el botón
+             .password-toggle con el icono del ojo. #}
           <div class="mb-3">
             <label class="form-label">Contraseña actual</label>
-            <input type="password" name="current_password" class="form-control">
+            <div class="password-wrapper">
+              <input type="password" id="profile_current_password" name="current_password" class="form-control pe-5">
+              <button type="button" class="password-toggle"
+                      onclick="togglePassword('profile_current_password', this)"
+                      tabindex="-1" aria-label="Mostrar u ocultar contraseña">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
           </div>
           <div class="mb-3">
             <label class="form-label">Nueva contraseña</label>
-            <input type="password" name="new_password" class="form-control">
+            <div class="password-wrapper">
+              <input type="password" id="profile_new_password" name="new_password" class="form-control pe-5">
+              <button type="button" class="password-toggle"
+                      onclick="togglePassword('profile_new_password', this)"
+                      tabindex="-1" aria-label="Mostrar u ocultar contraseña">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
             <div class="form-text">Mínimo 6 caracteres.</div>
           </div>
           <div class="mb-3">
             <label class="form-label">Repetir nueva contraseña</label>
-            <input type="password" name="confirm_password" class="form-control">
+            <div class="password-wrapper">
+              <input type="password" id="profile_confirm_password" name="confirm_password" class="form-control pe-5">
+              <button type="button" class="password-toggle"
+                      onclick="togglePassword('profile_confirm_password', this)"
+                      tabindex="-1" aria-label="Mostrar u ocultar contraseña">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
           </div>
 
           <button type="submit" class="btn btn-primary">Guardar cambios</button>
